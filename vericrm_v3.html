@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VeriCRM — ID Verification</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0c10; --surf:#111318; --surf2:#181c24; --surf3:#1e2330;
+  --bdr:#2a3040; --acc:#3b82f6; --acc2:#06d6a0; --acc3:#f59e0b;
+  --red:#ef4444; --txt:#e8eaf0; --txt2:#8892a4; --txt3:#4a5568;
+  --r:10px; --mono:'Space Mono',monospace; --dis:'Syne',sans-serif; --bod:'DM Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--bod);background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
+
+/* ── SETUP SCREEN ── */
+#setup-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.setup-card{width:100%;max-width:520px;background:var(--surf);border:1px solid var(--bdr);border-radius:16px;padding:40px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.setup-title{font-family:var(--dis);font-size:22px;font-weight:800;margin-bottom:4px}
+.setup-sub{font-size:13px;color:var(--txt2);margin-bottom:28px;font-family:var(--mono)}
+.step-label{font-size:11px;font-weight:700;color:var(--acc);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.step-desc{font-size:12px;color:var(--txt2);margin-bottom:10px;line-height:1.6}
+.step-desc a{color:var(--acc);text-decoration:none}
+.inp{width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:11px 14px;color:var(--txt);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .2s}
+.inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.inp::placeholder{color:var(--txt3)}
+.step-block{margin-bottom:22px}
+.hint-box{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:12px 14px;font-size:12px;color:#93c5fd;line-height:1.7;margin-bottom:22px}
+.hint-box code{background:rgba(59,130,246,.15);padding:1px 5px;border-radius:4px;font-family:var(--mono)}
+
+/* ── LOGIN ── */
+#login-page{min-height:100vh;display:none;align-items:center;justify-content:center;position:relative;overflow:hidden}
+#login-page::before{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,.07) 0%,transparent 70%);top:-80px;left:-80px;border-radius:50%;pointer-events:none}
+.login-card{width:400px;background:var(--surf);border:1px solid var(--bdr);border-radius:16px;padding:44px 38px;position:relative;z-index:1;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.brand-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--acc),#1d4ed8);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.brand-name{font-family:var(--dis);font-size:22px;font-weight:800}
+.brand-name span{color:var(--acc)}
+.brand-sub{font-size:12px;color:var(--txt2);font-family:var(--mono);margin-bottom:32px;letter-spacing:.5px}
+.lbl{display:block;font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:7px;text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono)}
+.fg{margin-bottom:18px}
+.sel{width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:11px 14px;color:var(--txt);font-family:var(--bod);font-size:14px;outline:none;transition:border-color .2s;cursor:pointer}
+.sel:focus{border-color:var(--acc)}
+.sel option{background:var(--surf2)}
+.err-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;border-radius:8px;padding:9px 13px;font-size:12px;margin-bottom:14px;display:none}
+.btn{width:100%;padding:12px 20px;border:none;border-radius:var(--r);font-family:var(--dis);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.btn-p{background:linear-gradient(135deg,var(--acc),#2563eb);color:#fff;box-shadow:0 4px 20px rgba(59,130,246,.3)}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(59,130,246,.4)}
+.btn-p:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.btn-s{background:transparent;border:1px solid var(--bdr);color:var(--txt2);font-size:13px}
+.btn-s:hover{border-color:var(--acc);color:var(--acc)}
+.btn-g{background:linear-gradient(135deg,var(--acc2),#059669);color:#fff;box-shadow:0 4px 20px rgba(6,214,160,.25)}
+.btn-sm{width:auto;padding:7px 14px;font-size:12px}
+
+/* ── APP ── */
+#app{display:none;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+
+/* sidebar */
+.sidebar{width:236px;background:var(--surf);border-right:1px solid var(--bdr);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+.sb-brand{padding:20px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:9px}
+.sb-brand-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--acc),#1d4ed8);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sb-brand-name{font-family:var(--dis);font-size:17px;font-weight:800}
+.sb-brand-name span{color:var(--acc)}
+.sb-dept{font-size:10px;color:var(--txt2);font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;padding:8px 20px;border-bottom:1px solid var(--bdr)}
+.sb-nav{flex:1;padding:14px 10px;overflow-y:auto}
+.nav-sec{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:1.2px;font-family:var(--mono);padding:6px 8px;margin-top:6px}
+.nav-it{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;color:var(--txt2);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;margin-bottom:1px;position:relative}
+.nav-it:hover{background:var(--surf2);color:var(--txt)}
+.nav-it.active{background:rgba(59,130,246,.1);color:var(--acc);font-weight:600}
+.nav-it.active::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:3px;background:var(--acc);border-radius:0 3px 3px 0}
+.nav-badge{margin-left:auto;background:var(--acc);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;font-family:var(--mono)}
+.filter-pill{margin:8px 10px 0;padding:9px 11px;background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.18);border-radius:8px}
+.fp-lbl{font-size:10px;color:var(--txt2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.fp-val{font-size:12px;font-family:var(--mono);color:var(--acc)}
+.sb-user{padding:14px 18px;border-top:1px solid var(--bdr);display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--acc2),#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;font-family:var(--dis)}
+.u-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.u-role{font-size:10px;color:var(--txt2);font-family:var(--mono);text-transform:uppercase}
+.logout{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:15px;padding:3px;border-radius:5px;transition:color .2s}
+.logout:hover{color:var(--red)}
+
+/* main */
+.main{margin-left:236px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--surf);border-bottom:1px solid var(--bdr);padding:14px 26px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;gap:12px}
+.page-title{font-family:var(--dis);font-size:19px;font-weight:700}
+.topbar-r{display:flex;align-items:center;gap:10px}
+.date-badge{font-family:var(--mono);font-size:11px;color:var(--txt2);background:var(--surf2);border:1px solid var(--bdr);padding:5px 12px;border-radius:20px}
+.mode-badge{font-family:var(--mono);font-size:11px;padding:5px 12px;border-radius:20px}
+.live-badge{background:rgba(6,214,160,.12);border:1px solid rgba(6,214,160,.3);color:var(--acc2)}
+.content{padding:26px;flex:1}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:18px;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat.blue::before{background:linear-gradient(90deg,var(--acc),#60a5fa)}
+.stat.green::before{background:linear-gradient(90deg,var(--acc2),#34d399)}
+.stat.amber::before{background:linear-gradient(90deg,var(--acc3),#fbbf24)}
+.stat.red::before{background:linear-gradient(90deg,var(--red),#f87171)}
+.stat-lbl{font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono);margin-bottom:8px}
+.stat-val{font-family:var(--dis);font-size:30px;font-weight:800;line-height:1;margin-bottom:4px}
+.stat-sub{font-size:11px;color:var(--txt2)}
+
+/* table card */
+.tcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;margin-bottom:20px}
+.thead-bar{padding:14px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.thead-title{font-family:var(--dis);font-size:14px;font-weight:700}
+.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.srch{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:7px 12px;color:var(--txt);font-family:var(--bod);font-size:12px;outline:none;width:200px;transition:border-color .2s}
+.srch:focus{border-color:var(--acc)}
+.srch::placeholder{color:var(--txt3)}
+.fsel{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:7px 10px;color:var(--txt);font-family:var(--bod);font-size:12px;outline:none;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--surf2);padding:9px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono);border-bottom:1px solid var(--bdr);white-space:nowrap}
+tbody tr{border-bottom:1px solid rgba(42,48,64,.4);transition:background .12s;cursor:pointer}
+tbody tr:hover{background:rgba(59,130,246,.04)}
+tbody tr:last-child{border-bottom:none}
+td{padding:10px 14px;font-size:13px;vertical-align:middle}
+.mono{font-family:var(--mono);font-size:11px;color:var(--txt2)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;font-family:var(--mono)}
+.b-v{background:rgba(6,214,160,.1);color:var(--acc2);border:1px solid rgba(6,214,160,.22)}
+.b-u{background:rgba(245,158,11,.1);color:var(--acc3);border:1px solid rgba(245,158,11,.22)}
+.b-open{background:rgba(59,130,246,.1);color:var(--acc);border:1px solid rgba(59,130,246,.22)}
+.b-close{background:rgba(6,214,160,.1);color:var(--acc2);border:1px solid rgba(6,214,160,.22)}
+.b-nc{background:rgba(74,85,104,.15);color:var(--txt2);border:1px solid rgba(74,85,104,.25)}
+.b-admin{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.22)}
+.b-manager{background:rgba(245,158,11,.1);color:var(--acc3);border:1px solid rgba(245,158,11,.22)}
+.b-agent{background:rgba(59,130,246,.1);color:var(--acc);border:1px solid rgba(59,130,246,.22)}
+.act-btn{background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--txt2);padding:4px 9px;font-size:11px;cursor:pointer;transition:all .15s}
+.act-btn:hover{border-color:var(--acc);color:var(--acc);background:rgba(59,130,246,.05)}
+.pag{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--bdr);font-size:12px;color:var(--txt2)}
+.pag-btns{display:flex;gap:4px}
+.pg-btn{background:var(--surf2);border:1px solid var(--bdr);color:var(--txt);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-family:var(--mono);transition:all .12s}
+.pg-btn:hover{border-color:var(--acc);color:var(--acc)}
+.pg-btn.active{background:var(--acc);border-color:var(--acc);color:#fff}
+.empty{text-align:center;padding:50px 20px;color:var(--txt2)}
+.empty-ico{font-size:36px;margin-bottom:10px;opacity:.4}
+
+/* view toggle */
+.view{display:none}
+.view.active{display:block}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px}
+.sec-title{font-family:var(--dis);font-size:21px;font-weight:800}
+.sec-sub{font-size:12px;color:var(--txt2);margin-top:2px}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 32px 100px rgba(0,0,0,.7);transform:translateY(14px);transition:transform .2s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-lg{max-width:660px}
+.m-hdr{padding:18px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.m-title{font-family:var(--dis);font-size:16px;font-weight:700}
+.m-close{background:none;border:none;color:var(--txt2);font-size:18px;cursor:pointer;width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.m-close:hover{background:var(--surf2);color:var(--txt)}
+.m-body{padding:22px}
+.m-foot{padding:14px 22px;border-top:1px solid var(--bdr);display:flex;gap:8px;justify-content:flex-end}
+.m-foot .btn{width:auto}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.req{color:var(--red);margin-left:2px}
+
+/* detail grid */
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.di-lbl{font-size:10px;color:var(--txt2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.di-val{font-size:13px;font-weight:500}
+.logs-sec{border-top:1px solid var(--bdr);padding-top:18px;margin-top:4px}
+.logs-title{font-family:var(--dis);font-size:13px;font-weight:700;margin-bottom:12px}
+.log-entry{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:8px}
+.log-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px;color:var(--txt2);font-family:var(--mono);flex-wrap:wrap}
+.log-remark{font-size:12px;color:var(--txt);line-height:1.5}
+
+/* info banner */
+.info-ban{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.18);border-radius:8px;padding:12px 15px;font-size:12px;color:#93c5fd;margin-bottom:18px;line-height:1.6}
+
+/* loading overlay */
+#load-ov{position:fixed;inset:0;background:rgba(10,12,16,.85);backdrop-filter:blur(4px);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.spinner{width:34px;height:34px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-msg{font-family:var(--mono);font-size:12px;color:var(--txt2)}
+
+/* dist bar */
+.dist-bar{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.dist-lbl{font-size:12px;min-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dist-track{flex:1;background:var(--surf3);border-radius:20px;height:6px;overflow:hidden}
+.dist-fill{height:100%;border-radius:20px;background:var(--acc2);transition:width .4s}
+.dist-n{font-family:var(--mono);font-size:11px;color:var(--acc2);min-width:24px;text-align:right}
+
+/* toast */
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:999;display:flex;flex-direction:column;gap:7px}
+.toast{background:var(--surf);border:1px solid var(--bdr);border-radius:9px;padding:12px 16px;font-size:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);display:flex;align-items:center;gap:8px;min-width:240px;animation:tslide .25s ease}
+.toast.ok{border-color:rgba(6,214,160,.35)}
+.toast.err{border-color:rgba(239,68,68,.35)}
+@keyframes tslide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ SETUP SCREEN ══════════════════ -->
+<div id="setup-screen">
+<div class="setup-card">
+  <div class="setup-title">🔐 VeriCRM Setup</div>
+  <div class="setup-sub">// one-time configuration — takes 3 minutes //</div>
+
+  <div class="hint-box">
+    This CRM reads your Google Sheet directly using the Sheets API.<br>
+    No Apps Script. No server. Just paste 2 values below and you're live.
+  </div>
+
+  <div class="step-block">
+    <div class="step-label">Step 1 — Google Sheet ID</div>
+    <div class="step-desc">
+      Open your sheet. The URL looks like:<br>
+      <code>docs.google.com/spreadsheets/d/<strong>THIS_PART</strong>/edit</code><br>
+      Copy that middle part and paste below.
+    </div>
+    <input class="inp" id="cfg-sheet-id" type="text" placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
+  </div>
+
+  <div class="step-block">
+    <div class="step-label">Step 2 — Google API Key</div>
+    <div class="step-desc">
+      1. Go to <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a><br>
+      2. Create project → Enable "Google Sheets API"<br>
+      3. Credentials → Create API Key → Copy it<br>
+      4. Also set your sheet sharing to "Anyone with the link can <strong>view</strong>"
+    </div>
+    <input class="inp" id="cfg-api-key" type="text" placeholder="AIzaSy...">
+  </div>
+
+  <div class="step-block">
+    <div class="step-label">Step 3 — Sheet Tab Name</div>
+    <div class="step-desc">The tab at the bottom of your sheet that has the leads (from your screenshot: <code>ALL_USERS</code>)</div>
+    <input class="inp" id="cfg-sheet-tab" type="text" placeholder="ALL_USERS" value="ALL_USERS">
+  </div>
+
+  <div class="step-block">
+    <div class="step-label">Step 4 — Call Logs Tab Name</div>
+    <div class="step-desc">A separate tab where call entries will be saved. Create an empty tab in your sheet named this:</div>
+    <input class="inp" id="cfg-logs-tab" type="text" placeholder="CALL_LOGS" value="CALL_LOGS">
+  </div>
+
+  <div style="margin-top:4px">
+    <button class="btn btn-p" onclick="saveConfig()">Save & Continue →</button>
+  </div>
+  <div style="margin-top:12px;text-align:center">
+    <button class="btn btn-s btn-sm" onclick="useDemoMode()">Skip — use demo data</button>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════ LOGIN PAGE ══════════════════ -->
+<div id="login-page">
+<div class="login-card">
+  <div class="brand">
+    <div class="brand-icon">🔐</div>
+    <div class="brand-name">Veri<span>CRM</span></div>
+  </div>
+  <div class="brand-sub">// ID VERIFICATION DEPARTMENT //</div>
+
+  <div class="err-box" id="login-err">Invalid credentials. Please try again.</div>
+
+  <div class="fg">
+    <label class="lbl">Username</label>
+    <input class="inp" id="li-user" type="text" placeholder="Enter username" autocomplete="off">
+  </div>
+  <div class="fg">
+    <label class="lbl">Password</label>
+    <input class="inp" id="li-pass" type="password" placeholder="••••••••">
+  </div>
+  <div class="fg">
+    <label class="lbl">Department</label>
+    <select class="sel" id="li-dept">
+      <option value="id_verification">ID Verification</option>
+      <option value="recharge">Recharge Department</option>
+    </select>
+  </div>
+  <button class="btn btn-p" id="li-btn" onclick="doLogin()">Sign In →</button>
+  <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--txt3);font-family:var(--mono)">
+    admin/admin123 · manager/mgr123 · agent1/agt123 · dipesh/mgr123
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════ APP ══════════════════ -->
+<div id="app">
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">🔐</div>
+      <div class="sb-brand-name">Veri<span>CRM</span></div>
+    </div>
+    <div class="sb-dept" id="sb-dept">ID VERIFICATION</div>
+    <nav class="sb-nav" id="sb-nav"></nav>
+    <div class="filter-pill">
+      <div class="fp-lbl">Leads from date</div>
+      <div class="fp-val" id="fp-val">—</div>
+    </div>
+    <div class="sb-user">
+      <div class="avatar" id="sb-avatar">A</div>
+      <div style="flex:1;min-width:0">
+        <div class="u-name" id="sb-uname">Admin</div>
+        <div class="u-role" id="sb-role">ADMIN</div>
+      </div>
+      <button class="logout" onclick="doLogout()" title="Logout">⏻</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="page-title" id="pg-title">Dashboard</div>
+      <div class="topbar-r">
+        <span class="mode-badge live-badge" id="mode-badge">● LIVE</span>
+        <span class="date-badge" id="tb-date"></span>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="view active" id="v-dashboard">
+        <div class="sec-hdr">
+          <div><div class="sec-title">Dashboard</div><div class="sec-sub">ID Verification overview</div></div>
+          <button class="btn btn-s btn-sm" onclick="hardRefresh()">🔄 Refresh Sheet</button>
+        </div>
+        <div class="stats" id="dash-stats"></div>
+        <div class="tcard">
+          <div class="thead-bar"><div class="thead-title">📋 Recent Leads</div></div>
+          <table><thead><tr><th>ID</th><th>Name</th><th>Location</th><th>Doc</th><th>Call</th><th>Assigned To</th><th>Join Date</th></tr></thead>
+          <tbody id="dash-tbl"></tbody></table>
+        </div>
+      </div>
+
+      <!-- MY LEADS -->
+      <div class="view" id="v-my-leads">
+        <div class="sec-hdr">
+          <div><div class="sec-title">My Leads</div><div class="sec-sub">Your assigned leads — log calls here</div></div>
+        </div>
+        <div class="info-ban">Your leads are matched from the sheet where <strong>Assign_To = your name</strong>. Fill all 3 fields when logging a call.</div>
+        <div class="tcard">
+          <div class="thead-bar">
+            <div class="thead-title">📞 My Leads</div>
+            <div class="controls">
+              <input class="srch" id="my-srch" placeholder="Search name / location…">
+              <select class="fsel" id="my-flt">
+                <option value="">All Status</option>
+                <option value="OPEN">OPEN</option>
+                <option value="CLOSE">CLOSE</option>
+                <option value="NOT CALLED">Not Called</option>
+              </select>
+            </div>
+          </div>
+          <table><thead><tr><th>ID</th><th>Name</th><th>Number</th><th>Location</th><th>Doc</th><th>Call Status</th><th>Last Called</th><th>Action</th></tr></thead>
+          <tbody id="my-tbl"></tbody></table>
+          <div class="pag" id="my-pag"></div>
+        </div>
+      </div>
+
+      <!-- ALL LEADS -->
+      <div class="view" id="v-all-leads">
+        <div class="sec-hdr">
+          <div><div class="sec-title">All Leads</div><div class="sec-sub" id="all-sub">All leads after filter date</div></div>
+          <div style="display:flex;gap:8px" id="all-actions"></div>
+        </div>
+        <div class="tcard">
+          <div class="thead-bar">
+            <div class="thead-title">🗂️ Lead Database</div>
+            <div class="controls">
+              <input class="srch" id="all-srch" placeholder="Search…">
+              <select class="fsel" id="all-flt-doc"><option value="">All Doc Status</option><option value="Verified">Verified</option><option value="Unverified">Unverified</option></select>
+              <select class="fsel" id="all-flt-call"><option value="">All Call Status</option><option value="OPEN">OPEN</option><option value="CLOSE">CLOSE</option><option value="NOT CALLED">Not Called</option></select>
+              <select class="fsel" id="all-flt-agent"><option value="">All Agents</option></select>
+            </div>
+          </div>
+          <table><thead><tr><th><input type="checkbox" id="chk-all"></th><th>ID</th><th>Name</th><th>Number</th><th>Adhar</th><th>Location</th><th>Doc</th><th>Call</th><th>Assigned To</th><th>Actions</th></tr></thead>
+          <tbody id="all-tbl"></tbody></table>
+          <div class="pag" id="all-pag"></div>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div class="view" id="v-users">
+        <div class="sec-hdr">
+          <div><div class="sec-title">Manage Users</div><div class="sec-sub">Add agents, managers, admins</div></div>
+          <button class="btn btn-p btn-sm" onclick="openAddUser()">+ Add User</button>
+        </div>
+        <div class="tcard">
+          <div class="thead-bar"><div class="thead-title">👥 Users</div><input class="srch" id="usr-srch" placeholder="Search users…"></div>
+          <table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Department</th><th>Assigned</th><th>Calls Logged</th><th>Actions</th></tr></thead>
+          <tbody id="usr-tbl"></tbody></table>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="view" id="v-reports">
+        <div class="sec-hdr"><div><div class="sec-title">Reports</div><div class="sec-sub">Agent performance analytics</div></div></div>
+        <div class="stats" id="rep-stats"></div>
+        <div class="tcard">
+          <div class="thead-bar"><div class="thead-title">📊 Agent Performance</div></div>
+          <table><thead><tr><th>Agent</th><th>Assigned</th><th>Calls Logged</th><th>Open</th><th>Closed</th><th>Completion</th></tr></thead>
+          <tbody id="rep-tbl"></tbody></table>
+        </div>
+        <div class="tcard">
+          <div class="thead-bar"><div class="thead-title">📈 Distribution</div></div>
+          <div style="padding:16px 18px" id="dist-bars"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ══════ MODALS ══════ -->
+
+<!-- Log Call -->
+<div class="overlay" id="m-log">
+  <div class="modal">
+    <div class="m-hdr"><div class="m-title">📞 Log Call Entry</div><button class="m-close" onclick="closeModal('m-log')">✕</button></div>
+    <div class="m-body">
+      <div class="dg" id="log-info"></div>
+      <hr style="border:none;border-top:1px solid var(--bdr);margin:0 0 18px">
+      <div class="fg">
+        <label class="lbl">Call Status<span class="req">*</span></label>
+        <select class="sel" id="log-status"><option value="">— Select —</option><option value="OPEN">OPEN</option><option value="CLOSE">CLOSE</option></select>
+      </div>
+      <div class="fg">
+        <label class="lbl">Remarks<span class="req">*</span></label>
+        <textarea class="inp" id="log-remark" rows="3" placeholder="Enter call remarks…" style="resize:vertical"></textarea>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label class="lbl">Call Date<span class="req">*</span></label>
+          <input class="inp" id="log-date" type="date">
+        </div>
+        <div class="fg">
+          <label class="lbl">Called By</label>
+          <input class="inp" id="log-by" type="text" readonly style="opacity:.6">
+        </div>
+      </div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-s btn-sm" onclick="closeModal('m-log')">Cancel</button>
+      <button class="btn btn-g btn-sm" id="log-save-btn" onclick="saveLog()">💾 Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lead Detail -->
+<div class="overlay" id="m-detail">
+  <div class="modal modal-lg">
+    <div class="m-hdr"><div class="m-title" id="detail-title">Lead Details</div><button class="m-close" onclick="closeModal('m-detail')">✕</button></div>
+    <div class="m-body">
+      <div class="dg" id="detail-grid"></div>
+      <div class="logs-sec"><div class="logs-title">📋 Call History</div><div id="detail-logs"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit User -->
+<div class="overlay" id="m-user">
+  <div class="modal">
+    <div class="m-hdr"><div class="m-title" id="m-user-title">Add User</div><button class="m-close" onclick="closeModal('m-user')">✕</button></div>
+    <div class="m-body">
+      <input type="hidden" id="edit-uid">
+      <div class="fg-row">
+        <div class="fg"><label class="lbl">Full Name<span class="req">*</span></label><input class="inp" id="u-name" placeholder="e.g. Priya Sharma"></div>
+        <div class="fg"><label class="lbl">Username<span class="req">*</span></label><input class="inp" id="u-uname" placeholder="e.g. priya_s"></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label class="lbl">Password<span class="req">*</span></label><input class="inp" id="u-pass" type="password" placeholder="Min 6 chars"></div>
+        <div class="fg"><label class="lbl">Role<span class="req">*</span></label>
+          <select class="sel" id="u-role"><option value="agent">Agent</option><option value="manager">Manager</option><option value="admin">Admin</option></select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="lbl">Department<span class="req">*</span></label>
+        <select class="sel" id="u-dept"><option value="id_verification">ID Verification</option><option value="recharge">Recharge</option><option value="both">Both</option></select>
+      </div>
+      <div class="fg">
+        <label class="lbl">Assign_To value in sheet</label>
+        <input class="inp" id="u-sheet-name" placeholder="Exact name as it appears in Assign_To column">
+        <div style="font-size:11px;color:var(--txt2);margin-top:5px">This is what the CRM matches against the sheet's Assign_To column to show this agent their leads</div>
+      </div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-s btn-sm" onclick="closeModal('m-user')">Cancel</button>
+      <button class="btn btn-p btn-sm" onclick="saveUser()">Save User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Date Filter -->
+<div class="overlay" id="m-date">
+  <div class="modal">
+    <div class="m-hdr"><div class="m-title">📅 Date Filter</div><button class="m-close" onclick="closeModal('m-date')">✕</button></div>
+    <div class="m-body">
+      <div class="info-ban">Only leads with <strong>Join Date ≥ this date</strong> will be loaded from the sheet. Older rows are ignored — keeping everything fast and light.</div>
+      <div class="fg"><label class="lbl">Show leads from<span class="req">*</span></label><input class="inp" id="df-input" type="date"></div>
+      <div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px;font-size:12px">
+        <div style="color:var(--txt2);font-family:var(--mono);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.8px">Current setting</div>
+        <div style="color:var(--acc);font-family:var(--mono)" id="df-current">—</div>
+      </div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-s btn-sm" onclick="closeModal('m-date')">Cancel</button>
+      <button class="btn btn-p btn-sm" onclick="applyDateFilter()">✓ Apply & Reload</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Modal -->
+<div class="overlay" id="m-assign">
+  <div class="modal">
+    <div class="m-hdr"><div class="m-title">Assign Leads</div><button class="m-close" onclick="closeModal('m-assign')">✕</button></div>
+    <div class="m-body">
+      <div class="info-ban"><strong id="assign-count">0</strong> leads selected. Choose an agent:</div>
+      <div class="fg"><label class="lbl">Assign To<span class="req">*</span></label>
+        <select class="sel" id="assign-agent"><option value="">— Select Agent —</option></select>
+      </div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-s btn-sm" onclick="closeModal('m-assign')">Cancel</button>
+      <button class="btn btn-p btn-sm" onclick="doAssign()">✓ Assign</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="load-ov">
+  <div class="spinner"></div>
+  <div class="load-msg" id="load-msg">Loading…</div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  CONFIG  (saved to localStorage after setup)
+// ═══════════════════════════════════════════════════
+let CFG = {
+  sheetId:   '',
+  apiKey:    '',
+  sheetTab:  'ALL_USERS',
+  logsTab:   'CALL_LOGS',
+  filterDate:'2026-02-21',
+  demo:      false
+};
+
+function loadCfg() {
+  const saved = localStorage.getItem('vericrm_cfg');
+  if (saved) { try { CFG = { ...CFG, ...JSON.parse(saved) }; } catch(e){} }
+}
+
+function saveCfg() {
+  localStorage.setItem('vericrm_cfg', JSON.stringify(CFG));
+}
+
+// ═══════════════════════════════════════════════════
+//  LOCAL USERS  (stored in localStorage)
+// ═══════════════════════════════════════════════════
+const DEFAULT_USERS = [
+  { id:'u1', name:'Super Admin',    username:'admin',   password:'admin123', role:'admin',   dept:'both',            sheetName:'ADMIN' },
+  { id:'u2', name:'Dipesh Manager', username:'dipesh',  password:'mgr123',   role:'manager', dept:'id_verification', sheetName:'DIPESH' },
+  { id:'u3', name:'Kanchan Agent',  username:'kanchan', password:'agt123',   role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
+  { id:'u4', name:'ID Agent 1',     username:'agent1',  password:'agt123',   role:'agent',   dept:'id_verification', sheetName:'ID VERIFICATION' },
+  { id:'u5', name:'Recharge Agent', username:'ragent1', password:'agt123',   role:'agent',   dept:'recharge',        sheetName:'RECHARGE' },
+];
+
+function getUsers() {
+  const saved = localStorage.getItem('vericrm_users');
+  if (saved) { try { return JSON.parse(saved); } catch(e){} }
+  return DEFAULT_USERS;
+}
+
+function saveUsers(users) {
+  localStorage.setItem('vericrm_users', JSON.stringify(users));
+}
+
+// ═══════════════════════════════════════════════════
+//  DEMO DATA
+// ═══════════════════════════════════════════════════
+const DEMO_LEADS = [
+  {agentId:'240421',name:'Pappu Kumar',         number:'8789523806',adhar:'',             status:'Unverified',joinDate:'2026-02-21 01:14:13',location:'Patna',               assignedTo:'ID VERIFICATION',callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240422',name:'रामरूप',             number:'9399660253',adhar:'',             status:'Unverified',joinDate:'2026-02-21 00:20:02',location:'Bhopal',              assignedTo:'DIPESH',          callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240423',name:'Jitendra Singh',      number:'9098002809',adhar:'713134027563', status:'Verified',  joinDate:'2026-02-21 01:42:03',location:'Indore',              assignedTo:'DIPESH',          callStatus:'OPEN',      callLogs:[{status:'OPEN',remark:'Called, interested',date:'2026-02-22',by:'Dipesh Manager'}]},
+  {agentId:'240424',name:'Anuj Pratap Singh',   number:'9760265157',adhar:'756831380081', status:'Unverified',joinDate:'2026-02-21 01:55:03',location:'Mainpuri',            assignedTo:'ID VERIFICATION',callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240425',name:'Arun Sethi',          number:'9812220417',adhar:'',             status:'Unverified',joinDate:'2026-02-21 01:55:17',location:'Ambala',              assignedTo:'KANCHAN',         callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240426',name:'Gorav Jalora',        number:'7014919434',adhar:'',             status:'Unverified',joinDate:'2026-02-21 01:57:04',location:'Udaipur',             assignedTo:'KANCHAN',         callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240427',name:'Raghvendra Nath Dubey',number:'7518392497',adhar:'',            status:'Unverified',joinDate:'2026-02-21 02:01:28',location:'New Delhi',           assignedTo:'ID VERIFICATION',callStatus:'CLOSE',     callLogs:[{status:'CLOSE',remark:'Done.',date:'2026-02-21',by:'ID Agent 1'}]},
+  {agentId:'240428',name:'Mahesh',              number:'8958694286',adhar:'582678583398', status:'Verified',  joinDate:'2026-02-21 02:01:39',location:'Naini Tal',           assignedTo:'ID VERIFICATION',callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240429',name:'Shailendra Rawat',    number:'8770458264',adhar:'',             status:'Unverified',joinDate:'2026-02-21 02:12:42',location:'Ujjain',              assignedTo:'DIPESH',          callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240430',name:'Mohit',               number:'6355827144',adhar:'',             status:'Unverified',joinDate:'2026-02-21 02:13:28',location:'Ahmedabad',           assignedTo:'DIPESH',          callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240431',name:'Dev Singhthakur',     number:'9451005894',adhar:'',             status:'Unverified',joinDate:'2026-02-21 02:13:48',location:'Rudrapur',            assignedTo:'KANCHAN',         callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240432',name:'Pawan',               number:'9217791200',adhar:'',             status:'Unverified',joinDate:'2026-02-21 02:22:38',location:'Jhajhar',             assignedTo:'KANCHAN',         callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240433',name:'Aman Yadav',          number:'9238957023',adhar:'',             status:'Unverified',joinDate:'2026-02-21 02:24:33',location:'Bhopal',              assignedTo:'DIPESH',          callStatus:'OPEN',      callLogs:[{status:'OPEN',remark:'Wants to reschedule',date:'2026-02-23',by:'Dipesh Manager'}]},
+  {agentId:'240434',name:'Mukesh Sharma',       number:'7078474130',adhar:'724755671236', status:'Unverified',joinDate:'2026-02-21 02:34:59',location:'Meerut',              assignedTo:'ID VERIFICATION',callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240435',name:'Prince',              number:'9572683246',adhar:'',             status:'Unverified',joinDate:'2026-02-21 02:38:37',location:'Jamshedpur',          assignedTo:'KANCHAN',         callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240436',name:'Ramesh Kumar Pal',    number:'7400304366',adhar:'808303837288', status:'Verified',  joinDate:'2026-02-21 02:41:36',location:'Prayagraj',           assignedTo:'ID VERIFICATION',callStatus:'CLOSE',     callLogs:[{status:'CLOSE',remark:'Done.',date:'2026-02-22',by:'ID Agent 1'}]},
+  {agentId:'240437',name:'Rajnish',             number:'7743021974',adhar:'',             status:'Unverified',joinDate:'2026-02-21 02:43:21',location:'Jalandhar',           assignedTo:'ID VERIFICATION',callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240438',name:'Himanshu',            number:'8077058136',adhar:'',             status:'Unverified',joinDate:'2026-02-21 02:51:27',location:'Dehra Dun',           assignedTo:'DIPESH',          callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240439',name:'Jitendra Parihar',    number:'9518523399',adhar:'994760366758', status:'Verified',  joinDate:'2026-02-21 03:04:52',location:'Pune',                assignedTo:'KANCHAN',         callStatus:'OPEN',      callLogs:[{status:'OPEN',remark:'Waiting for docs.',date:'2026-02-22',by:'Kanchan Agent'}]},
+  {agentId:'240440',name:'MOHD ARIF',           number:'7307828087',adhar:'',             status:'Unverified',joinDate:'2026-02-21 03:05:23',location:'Lucknow District',    assignedTo:'ID VERIFICATION',callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240441',name:'Arpit Nimje',         number:'9370056274',adhar:'',             status:'Unverified',joinDate:'2026-02-21 03:06:26',location:'Nagpur',              assignedTo:'KANCHAN',         callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240442',name:'Parveen',             number:'9971986853',adhar:'812621014261', status:'Unverified',joinDate:'2026-02-21 03:06:42',location:'Hapur',               assignedTo:'ID VERIFICATION',callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240443',name:'Durgaprasad Thakre',  number:'9822323034',adhar:'',             status:'Unverified',joinDate:'2026-02-21 03:17:32',location:'Nagpur Division',     assignedTo:'KANCHAN',         callStatus:'NOT CALLED',callLogs:[]},
+  {agentId:'240444',name:'Kaushik Mody',        number:'9825162834',adhar:'542125862746', status:'Unverified',joinDate:'2026-02-21 03:21:59',location:'Surat',               assignedTo:'DIPESH',          callStatus:'NOT CALLED',callLogs:[]},
+];
+
+// ═══════════════════════════════════════════════════
+//  APP STATE
+// ═══════════════════════════════════════════════════
+let CU        = null;   // current user
+let LEADS     = [];     // cached leads (post-filter + distributed)
+let RAW_LOGS  = {};     // { agentId: [logs] } — local call log cache
+let myPage    = 1;
+let allPage   = 1;
+let activeId  = null;   // current lead agentId for log modal
+const PS      = 12;     // page size
+
+// ═══════════════════════════════════════════════════
+//  SETUP SCREEN
+// ═══════════════════════════════════════════════════
+function saveConfig() {
+  const id  = document.getElementById('cfg-sheet-id').value.trim();
+  const key = document.getElementById('cfg-api-key').value.trim();
+  const tab = document.getElementById('cfg-sheet-tab').value.trim() || 'ALL_USERS';
+  const log = document.getElementById('cfg-logs-tab').value.trim() || 'CALL_LOGS';
+
+  if (!id)  { toast('⚠️ Please enter your Sheet ID', 'err'); return; }
+  if (!key) { toast('⚠️ Please enter your API Key', 'err'); return; }
+
+  CFG = { ...CFG, sheetId: id, apiKey: key, sheetTab: tab, logsTab: log, demo: false };
+  saveCfg();
+  showLogin();
+}
+
+function useDemoMode() {
+  CFG = { ...CFG, demo: true };
+  saveCfg();
+  showLogin();
+}
+
+// ═══════════════════════════════════════════════════
+//  SHOW/HIDE SCREENS
+// ═══════════════════════════════════════════════════
+function showSetup() {
+  document.getElementById('setup-screen').style.display = 'flex';
+  document.getElementById('login-page').style.display   = 'none';
+  document.getElementById('app').style.display          = 'none';
+}
+
+function showLogin() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('login-page').style.display   = 'flex';
+  document.getElementById('app').style.display          = 'none';
+}
+
+function showApp() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('login-page').style.display   = 'none';
+  document.getElementById('app').style.display          = 'block';
+}
+
+// ═══════════════════════════════════════════════════
+//  GOOGLE SHEETS API
+// ═══════════════════════════════════════════════════
+async function fetchSheetRange(tab, range) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/${encodeURIComponent(tab + '!' + range)}?key=${CFG.apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || 'Sheets API error');
+  }
+  const json = await res.json();
+  return json.values || [];
+}
+
+async function appendToSheet(tab, values) {
+  // Append via Sheets API requires OAuth — for API-key-only we store locally
+  // and show a downloadable CSV the admin can paste manually, OR
+  // we use a public Google Form approach. For now we store in localStorage.
+  const key  = 'vericrm_logs_' + tab;
+  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  existing.push(values);
+  localStorage.setItem(key, JSON.stringify(existing));
+  return true;
+}
+
+function getLocalLogs(tab) {
+  return JSON.parse(localStorage.getItem('vericrm_logs_' + tab) || '[]');
+}
+
+// ═══════════════════════════════════════════════════
+//  LOAD LEADS FROM SHEET  (or demo)
+// ═══════════════════════════════════════════════════
+async function loadLeads() {
+  if (CFG.demo) {
+    // Demo: apply date filter locally
+    LEADS = filterByDate(DEMO_LEADS.map(l => ({...l})), CFG.filterDate);
+    mergeLocalLogs();
+    autoDistribute();
+    return;
+  }
+
+  showLoader('Fetching leads from Google Sheet…');
+  try {
+    // Fetch all rows — col A:H = AgentId, Name, Number, Adhar, Status, JoinDate, Location, AssignTo
+    const rows = await fetchSheetRange(CFG.sheetTab, 'A:H');
+    if (!rows.length) { LEADS = []; hideLoader(); return; }
+
+    const header = rows[0].map(h => String(h).trim().toLowerCase());
+    // Map columns dynamically by header name
+    const ci = {
+      agentId:    header.findIndex(h => h.includes('agent') || h.includes('id')),
+      name:       header.findIndex(h => h === 'name'),
+      number:     header.findIndex(h => h.includes('number') || h.includes('mobile')),
+      adhar:      header.findIndex(h => h.includes('adhar') || h.includes('aadhar')),
+      status:     header.findIndex(h => h === 'status'),
+      joinDate:   header.findIndex(h => h.includes('join') || h.includes('date')),
+      location:   header.findIndex(h => h.includes('location') || h.includes('city')),
+      assignedTo: header.findIndex(h => h.includes('assign')),
+    };
+
+    const raw = rows.slice(1).map((row, idx) => ({
+      rowIndex:   idx + 2,
+      agentId:    String(row[ci.agentId]    ?? '').trim(),
+      name:       String(row[ci.name]       ?? '').trim(),
+      number:     String(row[ci.number]     ?? '').trim(),
+      adhar:      String(row[ci.adhar]      ?? '').trim(),
+      status:     String(row[ci.status]     ?? '').trim(),
+      joinDate:   String(row[ci.joinDate]   ?? '').trim(),
+      location:   String(row[ci.location]   ?? '').trim(),
+      assignedTo: String(row[ci.assignedTo] ?? '').trim(),
+      callStatus: 'NOT CALLED',
+      callLogs:   [],
+    })).filter(r => r.agentId && r.name);
+
+    LEADS = filterByDate(raw, CFG.filterDate);
+    mergeLocalLogs();
+    autoDistribute();
+    hideLoader();
+    toast(`✅ ${LEADS.length} leads loaded from sheet`, 'ok');
+  } catch(err) {
+    hideLoader();
+    toast('⚠️ Sheet error: ' + err.message + ' — using demo data', 'err');
+    LEADS = filterByDate(DEMO_LEADS.map(l=>({...l})), CFG.filterDate);
+    mergeLocalLogs();
+    autoDistribute();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  DATE FILTER
+// ═══════════════════════════════════════════════════
+function filterByDate(leads, fromDateStr) {
+  const from = new Date(fromDateStr + 'T00:00:00');
+  return leads.filter(l => {
+    if (!l.joinDate) return false;
+    const d = new Date(l.joinDate.replace(' ', 'T'));
+    return !isNaN(d) && d >= from;
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  AUTO-DISTRIBUTE EVENLY
+//  Only touches rows where assignedTo is blank,
+//  'ID VERIFICATION', or any value not matching
+//  a known agent's sheetName
+// ═══════════════════════════════════════════════════
+function autoDistribute() {
+  const users   = getUsers();
+  const agents  = users.filter(u =>
+    u.role === 'agent' &&
+    (u.dept === 'id_verification' || u.dept === 'both')
+  );
+  if (!agents.length) return;
+
+  const knownNames = new Set(agents.map(a => a.sheetName.toUpperCase()));
+
+  // Find unassigned leads
+  const unassigned = LEADS.filter(l => {
+    const a = l.assignedTo.trim().toUpperCase();
+    return !a || a === 'ID VERIFICATION' || !knownNames.has(a);
+  });
+
+  if (!unassigned.length) return;
+
+  // Round-robin distribution
+  unassigned.forEach((lead, i) => {
+    const agent = agents[i % agents.length];
+    lead.assignedTo = agent.sheetName;
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  MERGE LOCAL CALL LOGS INTO LEADS
+// ═══════════════════════════════════════════════════
+function mergeLocalLogs() {
+  const savedLogs = getLocalLogs(CFG.logsTab);
+  // Group by agentId
+  const byId = {};
+  savedLogs.forEach(row => {
+    const aid = String(row[0]);
+    if (!byId[aid]) byId[aid] = [];
+    byId[aid].push({ status: row[1], remark: row[2], date: row[3], by: row[4] });
+  });
+
+  LEADS.forEach(l => {
+    const logs = byId[l.agentId] || [];
+    // Merge on top of any sheet-level logs
+    l.callLogs   = [...(l.callLogs || []), ...logs];
+    l.callStatus = l.callLogs.length
+      ? l.callLogs[l.callLogs.length - 1].status
+      : 'NOT CALLED';
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  LOGIN
+// ═══════════════════════════════════════════════════
+async function doLogin() {
+  const uname = document.getElementById('li-user').value.trim();
+  const pass  = document.getElementById('li-pass').value;
+  const dept  = document.getElementById('li-dept').value;
+  const btn   = document.getElementById('li-btn');
+
+  btn.disabled    = true;
+  btn.textContent = 'Signing in…';
+
+  const users = getUsers();
+  const user  = users.find(u =>
+    u.username === uname &&
+    u.password === pass  &&
+    (u.dept === dept || u.dept === 'both')
+  );
+
+  if (!user) {
+    document.getElementById('login-err').style.display = 'block';
+    btn.disabled    = false;
+    btn.textContent = 'Sign In →';
+    return;
+  }
+
+  CU = { ...user, activeDept: dept };
+  document.getElementById('login-err').style.display = 'none';
+  btn.disabled    = false;
+  btn.textContent = 'Sign In →';
+  await initApp();
+}
+
+function doLogout() {
+  CU    = null;
+  LEADS = [];
+  showLogin();
+}
+
+// ═══════════════════════════════════════════════════
+//  APP INIT
+// ═══════════════════════════════════════════════════
+async function initApp() {
+  showApp();
+
+  document.getElementById('tb-date').textContent = new Date().toLocaleDateString('en-IN',
+    { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+
+  const mb = document.getElementById('mode-badge');
+  mb.textContent = CFG.demo ? '◎ DEMO' : '● LIVE';
+  mb.style.background = CFG.demo
+    ? 'rgba(245,158,11,.12)' : 'rgba(6,214,160,.12)';
+  mb.style.borderColor = CFG.demo
+    ? 'rgba(245,158,11,.3)'  : 'rgba(6,214,160,.3)';
+  mb.style.color = CFG.demo ? 'var(--acc3)' : 'var(--acc2)';
+
+  const ini = CU.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('sb-avatar').textContent = ini;
+  document.getElementById('sb-uname').textContent  = CU.name;
+  document.getElementById('sb-role').textContent   = CU.role.toUpperCase();
+  document.getElementById('fp-val').textContent    = CFG.filterDate;
+
+  await loadLeads();
+  buildSidebar();
+  navigateTo('dashboard');
+}
+
+async function hardRefresh() {
+  await loadLeads();
+  navigateTo(window._curView || 'dashboard');
+  document.getElementById('fp-val').textContent = CFG.filterDate;
+}
+
+// ═══════════════════════════════════════════════════
+//  SIDEBAR
+// ═══════════════════════════════════════════════════
+function buildSidebar() {
+  const role = CU.role;
+  const items = [
+    { key:'dashboard',  icon:'📊', label:'Dashboard',    roles:['admin','manager','agent'] },
+    { key:'my-leads',   icon:'📞', label:'My Leads',     roles:['agent'], badge: myLeads().length },
+    { key:'all-leads',  icon:'🗂️', label:'All Leads',    roles:['admin','manager'] },
+    { key:'users',      icon:'👥', label:'Manage Users', roles:['admin'] },
+    { key:'reports',    icon:'📈', label:'Reports',      roles:['admin','manager'] },
+  ];
+  let html = '<div class="nav-sec">Main Menu</div>';
+  items.forEach(it => {
+    if (!it.roles.includes(role)) return;
+    const b = it.badge ? `<span class="nav-badge">${it.badge}</span>` : '';
+    html += `<div class="nav-it" id="ni-${it.key}" onclick="navigateTo('${it.key}')">`
+          + `<span style="font-size:15px">${it.icon}</span>${it.label}${b}</div>`;
+  });
+  if (role === 'admin') {
+    html += '<div class="nav-sec" style="margin-top:14px">Tools</div>';
+    html += `<div class="nav-it" onclick="openDateModal()"><span style="font-size:15px">📅</span>Date Filter</div>`;
+    html += `<div class="nav-it" onclick="hardRefresh()"><span style="font-size:15px">🔄</span>Refresh Sheet</div>`;
+    html += `<div class="nav-it" onclick="exportLogs()"><span style="font-size:15px">📥</span>Export Logs CSV</div>`;
+  }
+  document.getElementById('sb-nav').innerHTML = html;
+}
+
+function navigateTo(view) {
+  window._curView = view;
+  document.querySelectorAll('.nav-it').forEach(el => el.classList.remove('active'));
+  const ni = document.getElementById('ni-' + view);
+  if (ni) ni.classList.add('active');
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+  const titles = { dashboard:'Dashboard', 'my-leads':'My Leads',
+    'all-leads':'All Leads', users:'Manage Users', reports:'Reports' };
+  document.getElementById('pg-title').textContent = titles[view] || view;
+
+  switch(view) {
+    case 'dashboard': renderDashboard(); break;
+    case 'my-leads':  renderMyLeads();   break;
+    case 'all-leads': renderAllLeads();  break;
+    case 'users':     renderUsers();     break;
+    case 'reports':   renderReports();   break;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════
+function myLeads() {
+  const names = new Set([
+    CU.name.toUpperCase(),
+    CU.username.toUpperCase(),
+    (CU.sheetName || '').toUpperCase(),
+  ].filter(Boolean));
+  return LEADS.filter(l => names.has(l.assignedTo.trim().toUpperCase()));
+}
+
+function bDoc(s)  { return s==='Verified' ? '<span class="badge b-v">✓ Verified</span>' : '<span class="badge b-u">⚠ Unverified</span>'; }
+function bCall(s) {
+  if (s==='OPEN')  return '<span class="badge b-open">● OPEN</span>';
+  if (s==='CLOSE') return '<span class="badge b-close">✓ CLOSE</span>';
+  return '<span class="badge b-nc">— Not Called</span>';
+}
+function paginate(arr, page, size) { return arr.slice((page-1)*size, page*size); }
+function pagHtml(total, page, size, setFn, labelTxt) {
+  const pages = Math.ceil(total/size);
+  let h = `<span>${total} ${labelTxt}</span><div class="pag-btns">`;
+  for (let i=1; i<=pages; i++)
+    h += `<button class="pg-btn${page===i?' active':''}" onclick="${setFn}(${i})">${i}</button>`;
+  return h + '</div>';
+}
+
+// ═══════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════
+function renderDashboard() {
+  document.getElementById('v-dashboard').classList.add('active');
+  const L = LEADS, tot = L.length;
+  const ver   = L.filter(l=>l.status==='Verified').length;
+  const called= L.filter(l=>l.callStatus!=='NOT CALLED').length;
+  const closed= L.filter(l=>l.callStatus==='CLOSE').length;
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat blue"><div class="stat-lbl">Total Leads</div><div class="stat-val">${tot}</div><div class="stat-sub">From ${CFG.filterDate}</div></div>
+    <div class="stat green"><div class="stat-lbl">Verified Docs</div><div class="stat-val">${ver}</div><div class="stat-sub">${tot?Math.round(ver/tot*100):0}%</div></div>
+    <div class="stat amber"><div class="stat-lbl">Calls Made</div><div class="stat-val">${called}</div><div class="stat-sub">of ${tot}</div></div>
+    <div class="stat red"><div class="stat-lbl">Closed</div><div class="stat-val">${closed}</div><div class="stat-sub">completed</div></div>`;
+  const rows = L.slice(0,10);
+  document.getElementById('dash-tbl').innerHTML = rows.length
+    ? rows.map(l=>`<tr onclick="openDetail('${l.agentId}')">
+        <td class="mono">${l.agentId}</td><td><strong>${l.name}</strong></td><td>${l.location}</td>
+        <td>${bDoc(l.status)}</td><td>${bCall(l.callStatus)}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--acc2)">${l.assignedTo}</td>
+        <td class="mono">${l.joinDate.split(' ')[0]}</td></tr>`).join('')
+    : `<tr><td colspan="7"><div class="empty"><div class="empty-ico">📭</div>No leads from ${CFG.filterDate}</div></td></tr>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  MY LEADS
+// ═══════════════════════════════════════════════════
+function renderMyLeads() {
+  document.getElementById('v-my-leads').classList.add('active');
+  renderMyTable();
+  document.getElementById('my-srch').oninput  = () => { myPage=1; renderMyTable(); };
+  document.getElementById('my-flt').onchange  = () => { myPage=1; renderMyTable(); };
+}
+
+function setMyPage(p) { myPage=p; renderMyTable(); }
+
+function renderMyTable() {
+  const q   = document.getElementById('my-srch').value.toLowerCase();
+  const flt = document.getElementById('my-flt').value;
+  let leads = myLeads();
+  if (q)   leads = leads.filter(l => l.name.toLowerCase().includes(q) || l.location.toLowerCase().includes(q));
+  if (flt) leads = leads.filter(l => l.callStatus === flt);
+  const page = paginate(leads, myPage, PS);
+  document.getElementById('my-tbl').innerHTML = page.length
+    ? page.map(l => `<tr>
+        <td class="mono">${l.agentId}</td>
+        <td><strong>${l.name}</strong></td>
+        <td class="mono">${l.number}</td>
+        <td>${l.location}</td>
+        <td>${bDoc(l.status)}</td>
+        <td>${bCall(l.callStatus)}</td>
+        <td class="mono">${l.callLogs.length ? l.callLogs[l.callLogs.length-1].date : '—'}</td>
+        <td><button class="act-btn" onclick="openLog('${l.agentId}')">📞 Log Call</button></td>
+      </tr>`).join('')
+    : `<tr><td colspan="8"><div class="empty"><div class="empty-ico">📭</div>No leads found</div></td></tr>`;
+  document.getElementById('my-pag').innerHTML = pagHtml(leads.length, myPage, PS, 'setMyPage', 'leads');
+}
+
+// ═══════════════════════════════════════════════════
+//  ALL LEADS
+// ═══════════════════════════════════════════════════
+function renderAllLeads() {
+  document.getElementById('v-all-leads').classList.add('active');
+  document.getElementById('all-sub').textContent =
+    `${LEADS.length} leads loaded · filter from ${CFG.filterDate}`;
+
+  // Populate agent filter
+  const agents = getUsers().filter(u=>u.role==='agent');
+  document.getElementById('all-flt-agent').innerHTML =
+    '<option value="">All Agents</option>' +
+    agents.map(a=>`<option value="${a.sheetName}">${a.name}</option>`).join('');
+
+  // Admin actions
+  if (CU.role === 'admin') {
+    document.getElementById('all-actions').innerHTML =
+      `<button class="btn btn-s btn-sm" onclick="openAssignModal()">📋 Bulk Assign</button>`;
+  }
+
+  renderAllTable();
+  ['all-srch','all-flt-doc','all-flt-call','all-flt-agent'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.oninput = el.onchange = () => { allPage=1; renderAllTable(); };
+  });
+  document.getElementById('chk-all').onchange = function() {
+    document.querySelectorAll('.lchk').forEach(c => c.checked = this.checked);
+  };
+}
+
+function setAllPage(p) { allPage=p; renderAllTable(); }
+
+function renderAllTable() {
+  const q    = document.getElementById('all-srch').value.toLowerCase();
+  const fdoc = document.getElementById('all-flt-doc').value;
+  const fcal = document.getElementById('all-flt-call').value;
+  const fagt = document.getElementById('all-flt-agent').value;
+  let leads  = LEADS;
+  if (q)    leads = leads.filter(l => l.name.toLowerCase().includes(q) || l.agentId.includes(q) || l.location.toLowerCase().includes(q));
+  if (fdoc) leads = leads.filter(l => l.status === fdoc);
+  if (fcal) leads = leads.filter(l => l.callStatus === fcal);
+  if (fagt) leads = leads.filter(l => l.assignedTo.toUpperCase() === fagt.toUpperCase());
+
+  const page  = paginate(leads, allPage, PS);
+  const canEd = CU.role === 'admin';
+  document.getElementById('all-tbl').innerHTML = page.length
+    ? page.map(l => `<tr>
+        <td>${canEd?`<input type="checkbox" class="lchk" value="${l.agentId}">`:''}</td>
+        <td class="mono">${l.agentId}</td>
+        <td><strong>${l.name}</strong></td>
+        <td class="mono">${l.number}</td>
+        <td class="mono">${l.adhar||'—'}</td>
+        <td>${l.location}</td>
+        <td>${bDoc(l.status)}</td>
+        <td>${bCall(l.callStatus)}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--acc2)">${l.assignedTo}</td>
+        <td>
+          <button class="act-btn" onclick="openDetail('${l.agentId}')">👁 View</button>
+          ${canEd?`<button class="act-btn" style="margin-left:4px" onclick="quickAssign('${l.agentId}')">↗ Assign</button>`:''}
+        </td></tr>`).join('')
+    : `<tr><td colspan="10"><div class="empty"><div class="empty-ico">🔍</div>No leads match filters</div></td></tr>`;
+  document.getElementById('all-pag').innerHTML = pagHtml(leads.length, allPage, PS, 'setAllPage', 'leads');
+}
+
+// ═══════════════════════════════════════════════════
+//  LEAD DETAIL MODAL
+// ═══════════════════════════════════════════════════
+function openDetail(aid) {
+  const l = LEADS.find(x => x.agentId === aid);
+  if (!l) return;
+  document.getElementById('detail-title').textContent = `${l.name} — #${l.agentId}`;
+  document.getElementById('detail-grid').innerHTML = `
+    <div><div class="di-lbl">Agent ID</div><div class="di-val mono">${l.agentId}</div></div>
+    <div><div class="di-lbl">Name</div><div class="di-val">${l.name}</div></div>
+    <div><div class="di-lbl">Phone</div><div class="di-val mono">${l.number}</div></div>
+    <div><div class="di-lbl">Adhar</div><div class="di-val mono">${l.adhar||'Not provided'}</div></div>
+    <div><div class="di-lbl">Location</div><div class="di-val">📍 ${l.location}</div></div>
+    <div><div class="di-lbl">Join Date</div><div class="di-val">${l.joinDate}</div></div>
+    <div><div class="di-lbl">Doc Status</div><div class="di-val">${bDoc(l.status)}</div></div>
+    <div><div class="di-lbl">Call Status</div><div class="di-val">${bCall(l.callStatus)}</div></div>
+    <div style="grid-column:1/-1"><div class="di-lbl">Assigned To</div><div class="di-val" style="color:var(--acc2)">${l.assignedTo}</div></div>`;
+  document.getElementById('detail-logs').innerHTML = l.callLogs.length
+    ? l.callLogs.map((lg,i)=>`
+        <div class="log-entry">
+          <div class="log-meta"><span>${i+1}.</span>${bCall(lg.status)}<span>📅 ${lg.date}</span><span>👤 ${lg.by}</span></div>
+          <div class="log-remark">💬 ${lg.remark}</div>
+        </div>`).join('')
+    : '<div class="empty" style="padding:20px"><div class="empty-ico">📵</div>No calls yet</div>';
+  openModal('m-detail');
+}
+
+// ═══════════════════════════════════════════════════
+//  LOG CALL MODAL
+// ═══════════════════════════════════════════════════
+function openLog(aid) {
+  const l = LEADS.find(x => x.agentId === aid);
+  if (!l) return;
+  activeId = aid;
+  document.getElementById('log-info').innerHTML = `
+    <div><div class="di-lbl">Name</div><div class="di-val">${l.name}</div></div>
+    <div><div class="di-lbl">Agent ID</div><div class="di-val mono">${l.agentId}</div></div>
+    <div><div class="di-lbl">Phone</div><div class="di-val mono">${l.number}</div></div>
+    <div><div class="di-lbl">Location</div><div class="di-val">📍 ${l.location}</div></div>`;
+  document.getElementById('log-status').value  = '';
+  document.getElementById('log-remark').value  = '';
+  document.getElementById('log-date').value    = new Date().toISOString().split('T')[0];
+  document.getElementById('log-by').value      = CU.name;
+  openModal('m-log');
+}
+
+function saveLog() {
+  const status  = document.getElementById('log-status').value;
+  const remark  = document.getElementById('log-remark').value.trim();
+  const date    = document.getElementById('log-date').value;
+  if (!status)  { toast('⚠️ Select call status', 'err'); return; }
+  if (!remark)  { toast('⚠️ Remarks required', 'err'); return; }
+  if (!date)    { toast('⚠️ Select call date', 'err'); return; }
+
+  const lead = LEADS.find(l => l.agentId === activeId);
+  if (!lead) return;
+
+  const btn = document.getElementById('log-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  // Save to localStorage (acts as local DB since API key = read-only)
+  appendToSheet(CFG.logsTab, [lead.agentId, status, remark, date, CU.name,
+    new Date().toISOString(), lead.name, lead.location]);
+
+  // Update in-memory lead
+  lead.callLogs.push({ status, remark, date, by: CU.name });
+  lead.callStatus = status;
+
+  btn.disabled = false; btn.textContent = '💾 Save Entry';
+  closeModal('m-log');
+  toast('✅ Call log saved!', 'ok');
+  if (window._curView === 'my-leads') renderMyTable();
+  if (window._curView === 'all-leads') renderAllTable();
+}
+
+// ═══════════════════════════════════════════════════
+//  ASSIGN
+// ═══════════════════════════════════════════════════
+let _assignSingle = null;
+
+function openAssignModal() {
+  const checked = [...document.querySelectorAll('.lchk:checked')];
+  if (!checked.length) { toast('⚠️ Select at least one lead', 'err'); return; }
+  _assignSingle = null;
+  document.getElementById('assign-count').textContent = checked.length + ' leads selected';
+  populateAssignSelect();
+  openModal('m-assign');
+}
+
+function quickAssign(aid) {
+  _assignSingle = aid;
+  const l = LEADS.find(x=>x.agentId===aid);
+  document.getElementById('assign-count').textContent = `Lead: ${l?.name||aid}`;
+  populateAssignSelect();
+  openModal('m-assign');
+}
+
+function populateAssignSelect() {
+  const agents = getUsers().filter(u=>u.role==='agent');
+  document.getElementById('assign-agent').innerHTML =
+    '<option value="">— Select Agent —</option>' +
+    agents.map(a=>`<option value="${a.sheetName}">${a.name} (${a.sheetName})</option>`).join('');
+}
+
+function doAssign() {
+  const sn = document.getElementById('assign-agent').value;
+  if (!sn) { toast('⚠️ Select an agent', 'err'); return; }
+
+  if (_assignSingle) {
+    const l = LEADS.find(x=>x.agentId===_assignSingle);
+    if (l) l.assignedTo = sn;
+  } else {
+    document.querySelectorAll('.lchk:checked').forEach(cb => {
+      const l = LEADS.find(x=>x.agentId===cb.value);
+      if (l) l.assignedTo = sn;
+    });
+  }
+  closeModal('m-assign');
+  toast(`✅ Leads assigned to ${sn}`, 'ok');
+  renderAllTable();
+}
+
+// ═══════════════════════════════════════════════════
+//  DATE FILTER MODAL
+// ═══════════════════════════════════════════════════
+function openDateModal() {
+  document.getElementById('df-input').value   = CFG.filterDate;
+  document.getElementById('df-current').textContent =
+    `Showing leads from ${CFG.filterDate} onwards (${LEADS.length} loaded)`;
+  openModal('m-date');
+}
+
+async function applyDateFilter() {
+  const nd = document.getElementById('df-input').value;
+  if (!nd) { toast('⚠️ Pick a date', 'err'); return; }
+  CFG.filterDate = nd;
+  saveCfg();
+  document.getElementById('fp-val').textContent = nd;
+  closeModal('m-date');
+  await loadLeads();
+  navigateTo(window._curView || 'dashboard');
+  toast(`✅ Showing leads from ${nd}`, 'ok');
+}
+
+// ═══════════════════════════════════════════════════
+//  USERS
+// ═══════════════════════════════════════════════════
+function renderUsers() {
+  document.getElementById('v-users').classList.add('active');
+  renderUsersTable();
+  document.getElementById('usr-srch').oninput = renderUsersTable;
+}
+
+function renderUsersTable() {
+  const q    = document.getElementById('usr-srch').value.toLowerCase();
+  const users= getUsers().filter(u => !q || u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q));
+  const rmap = { admin:'b-admin', manager:'b-manager', agent:'b-agent' };
+  const dn   = { id_verification:'ID Verify', recharge:'Recharge', both:'Both' };
+  document.getElementById('usr-tbl').innerHTML = users.map(u => {
+    const assigned = LEADS.filter(l => l.assignedTo.toUpperCase() === (u.sheetName||'').toUpperCase()).length;
+    const calls    = LEADS.reduce((a,l) => a + l.callLogs.filter(lg=>lg.by===u.name).length, 0);
+    return `<tr>
+      <td><strong>${u.name}</strong></td>
+      <td class="mono">@${u.username}</td>
+      <td><span class="badge ${rmap[u.role]||''}">${u.role.toUpperCase()}</span></td>
+      <td style="font-size:12px;color:var(--txt2)">${dn[u.dept]||u.dept}</td>
+      <td class="mono" style="color:var(--acc)">${assigned}</td>
+      <td class="mono" style="color:var(--acc2)">${calls}</td>
+      <td>
+        <button class="act-btn" onclick="editUser('${u.id}')">✏️ Edit</button>
+        ${u.id!=='u1'?`<button class="act-btn" style="margin-left:4px;color:var(--red)" onclick="delUser('${u.id}')">🗑</button>`:''}
+      </td></tr>`;
+  }).join('');
+}
+
+function openAddUser() {
+  document.getElementById('m-user-title').textContent = '+ Add User';
+  document.getElementById('edit-uid').value   = '';
+  ['u-name','u-uname','u-sheet-name'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('u-pass').value     = '';
+  document.getElementById('u-role').value     = 'agent';
+  document.getElementById('u-dept').value     = 'id_verification';
+  openModal('m-user');
+}
+
+function editUser(uid) {
+  const u = getUsers().find(x=>x.id===uid);
+  if (!u) return;
+  document.getElementById('m-user-title').textContent = '✏️ Edit User';
+  document.getElementById('edit-uid').value    = u.id;
+  document.getElementById('u-name').value      = u.name;
+  document.getElementById('u-uname').value     = u.username;
+  document.getElementById('u-pass').value      = u.password;
+  document.getElementById('u-role').value      = u.role;
+  document.getElementById('u-dept').value      = u.dept;
+  document.getElementById('u-sheet-name').value= u.sheetName||'';
+  openModal('m-user');
+}
+
+function saveUser() {
+  const name  = document.getElementById('u-name').value.trim();
+  const uname = document.getElementById('u-uname').value.trim();
+  const pass  = document.getElementById('u-pass').value.trim();
+  const role  = document.getElementById('u-role').value;
+  const dept  = document.getElementById('u-dept').value;
+  const sname = document.getElementById('u-sheet-name').value.trim();
+  const eid   = document.getElementById('edit-uid').value;
+
+  if (!name||!uname||!pass) { toast('⚠️ All fields required', 'err'); return; }
+  if (pass.length < 6)       { toast('⚠️ Password min 6 chars', 'err'); return; }
+
+  const users = getUsers();
+  if (eid) {
+    const i = users.findIndex(u=>u.id===eid);
+    if (i>-1) users[i] = { ...users[i], name, username:uname, password:pass, role, dept, sheetName:sname||name.toUpperCase() };
+    toast('✅ User updated', 'ok');
+  } else {
+    if (users.some(u=>u.username===uname)) { toast('⚠️ Username taken', 'err'); return; }
+    users.push({ id:'u_'+Date.now(), name, username:uname, password:pass, role, dept, sheetName:sname||name.toUpperCase() });
+    toast('✅ User added', 'ok');
+  }
+  saveUsers(users);
+  closeModal('m-user');
+  renderUsersTable();
+  buildSidebar();
+}
+
+function delUser(uid) {
+  if (!confirm('Delete this user?')) return;
+  const users = getUsers().filter(u=>u.id!==uid);
+  saveUsers(users);
+  toast('🗑️ User deleted', 'ok');
+  renderUsersTable();
+}
+
+// ═══════════════════════════════════════════════════
+//  REPORTS
+// ═══════════════════════════════════════════════════
+function renderReports() {
+  document.getElementById('v-reports').classList.add('active');
+  const L = LEADS, tot = L.length;
+  const tc = L.reduce((a,l)=>a+l.callLogs.length,0);
+  const op = L.filter(l=>l.callStatus==='OPEN').length;
+  const cl = L.filter(l=>l.callStatus==='CLOSE').length;
+  document.getElementById('rep-stats').innerHTML = `
+    <div class="stat blue"><div class="stat-lbl">Total Leads</div><div class="stat-val">${tot}</div><div class="stat-sub">from ${CFG.filterDate}</div></div>
+    <div class="stat amber"><div class="stat-lbl">Total Calls</div><div class="stat-val">${tc}</div><div class="stat-sub">logged entries</div></div>
+    <div class="stat blue"><div class="stat-lbl">Open</div><div class="stat-val">${op}</div><div class="stat-sub">in progress</div></div>
+    <div class="stat green"><div class="stat-lbl">Closed</div><div class="stat-val">${cl}</div><div class="stat-sub">completed</div></div>`;
+
+  const agents = getUsers().filter(u=>u.role==='agent');
+  const maxAss = Math.max(1, ...agents.map(a=>
+    L.filter(l=>l.assignedTo.toUpperCase()===(a.sheetName||'').toUpperCase()).length));
+
+  document.getElementById('rep-tbl').innerHTML = agents.map(a => {
+    const ass  = L.filter(l=>l.assignedTo.toUpperCase()===(a.sheetName||'').toUpperCase());
+    const logs = L.reduce((acc,l)=>acc+l.callLogs.filter(lg=>lg.by===a.name).length,0);
+    const opC  = ass.filter(l=>l.callStatus==='OPEN').length;
+    const clC  = ass.filter(l=>l.callStatus==='CLOSE').length;
+    const pct  = ass.length ? Math.round(clC/ass.length*100) : 0;
+    return `<tr>
+      <td><strong>${a.name}</strong><br><span class="mono">${a.sheetName}</span></td>
+      <td class="mono" style="color:var(--acc)">${ass.length}</td>
+      <td class="mono">${logs}</td>
+      <td><span class="badge b-open">${opC}</span></td>
+      <td><span class="badge b-close">${clC}</span></td>
+      <td style="min-width:140px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;background:var(--surf3);border-radius:20px;height:5px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:var(--acc2);border-radius:20px"></div>
+          </div>
+          <span class="mono" style="color:var(--acc2);font-size:11px">${pct}%</span>
+        </div>
+      </td></tr>`;
+  }).join('');
+
+  document.getElementById('dist-bars').innerHTML = agents.map(a => {
+    const n   = L.filter(l=>l.assignedTo.toUpperCase()===(a.sheetName||'').toUpperCase()).length;
+    const pct = Math.round(n/Math.max(1,tot)*100);
+    return `<div class="dist-bar">
+      <div class="dist-lbl">${a.name}</div>
+      <div class="dist-track"><div class="dist-fill" style="width:${pct}%"></div></div>
+      <div class="dist-n">${n}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+//  EXPORT LOGS CSV
+// ═══════════════════════════════════════════════════
+function exportLogs() {
+  const logs = getLocalLogs(CFG.logsTab);
+  if (!logs.length) { toast('⚠️ No call logs saved yet', 'err'); return; }
+  const header = 'Agent ID,Call Status,Remarks,Call Date,Called By,Saved At,Lead Name,Location\n';
+  const rows   = logs.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob   = new Blob([header+rows], { type:'text/csv' });
+  const a      = document.createElement('a');
+  a.href       = URL.createObjectURL(blob);
+  a.download   = `call_logs_${CFG.filterDate}.csv`;
+  a.click();
+  toast('✅ CSV downloaded', 'ok');
+}
+
+// ═══════════════════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); activeId=null; }
+document.querySelectorAll('.overlay').forEach(ov =>
+  ov.addEventListener('click', e => { if (e.target===ov) ov.classList.remove('open'); })
+);
+
+// ═══════════════════════════════════════════════════
+//  LOADER & TOAST
+// ═══════════════════════════════════════════════════
+function showLoader(msg) {
+  const el = document.getElementById('load-ov');
+  document.getElementById('load-msg').textContent = msg||'Loading…';
+  el.style.display = 'flex';
+}
+function hideLoader() { document.getElementById('load-ov').style.display = 'none'; }
+
+function toast(msg, type='ok') {
+  const w = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  w.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════
+loadCfg();
+if (!CFG.sheetId && !CFG.demo) {
+  showSetup();
+} else {
+  showLogin();
+}
+
+document.getElementById('li-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+</script>
+</body>
+</html>
