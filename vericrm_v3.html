@@ -106,6 +106,7 @@ body{font-family:var(--bod);background:var(--bg);color:var(--txt);min-height:100
 
 /* table card */
 .tcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;margin-bottom:20px}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .thead-bar{padding:14px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .thead-title{font-family:var(--dis);font-size:14px;font-weight:700}
 .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -113,7 +114,7 @@ body{font-family:var(--bod);background:var(--bg);color:var(--txt);min-height:100
 .srch:focus{border-color:var(--acc)}
 .srch::placeholder{color:var(--txt3)}
 .fsel{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:7px 10px;color:var(--txt);font-family:var(--bod);font-size:12px;outline:none;cursor:pointer}
-table{width:100%;border-collapse:collapse}
+table{width:100%;border-collapse:collapse;min-width:700px}
 thead th{background:var(--surf2);padding:9px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono);border-bottom:1px solid var(--bdr);white-space:nowrap}
 tbody tr{border-bottom:1px solid rgba(42,48,64,.4);transition:background .12s;cursor:pointer}
 tbody tr:hover{background:rgba(59,130,246,.04)}
@@ -334,8 +335,8 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
         <div class="stats" id="dash-stats"></div>
         <div class="tcard">
           <div class="thead-bar"><div class="thead-title">📋 Recent Leads</div></div>
-          <table><thead><tr><th>ID</th><th>Name</th><th>Location</th><th>Doc</th><th>Call</th><th>Assigned To</th><th>Join Date</th></tr></thead>
-          <tbody id="dash-tbl"></tbody></table>
+          <div class="tbl-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Location</th><th>Doc</th><th>Call</th><th>Assigned To</th><th>Join Date</th></tr></thead>
+          <tbody id="dash-tbl"></tbody></table></div>
         </div>
       </div>
 
@@ -358,8 +359,8 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
               </select>
             </div>
           </div>
-          <table><thead><tr><th>ID</th><th>Name</th><th>Number</th><th>Location</th><th>Doc</th><th>Call Status</th><th>Last Called</th><th>Action</th></tr></thead>
-          <tbody id="my-tbl"></tbody></table>
+          <div class="tbl-wrap"><table><thead><tr><th>ID</th><th>Name / Number</th><th>Location</th><th>Doc</th><th>Call Status</th><th>Last Called</th><th>Action</th></tr></thead>
+          <tbody id="my-tbl"></tbody></table></div>
           <div class="pag" id="my-pag"></div>
         </div>
       </div>
@@ -380,8 +381,8 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
               <select class="fsel" id="all-flt-agent"><option value="">All Agents</option></select>
             </div>
           </div>
-          <table><thead><tr><th><input type="checkbox" id="chk-all"></th><th>ID</th><th>Name</th><th>Number</th><th>Adhar</th><th>Location</th><th>Doc</th><th>Call</th><th>Assigned To</th><th>Actions</th></tr></thead>
-          <tbody id="all-tbl"></tbody></table>
+          <div class="tbl-wrap"><table><thead><tr><th><input type="checkbox" id="chk-all"></th><th>ID</th><th>Name</th><th>Number</th><th>Adhar</th><th>Location</th><th>Doc</th><th>Call</th><th>Assigned To</th><th>Actions</th></tr></thead>
+          <tbody id="all-tbl"></tbody></table></div>
           <div class="pag" id="all-pag"></div>
         </div>
       </div>
@@ -394,8 +395,8 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
         </div>
         <div class="tcard">
           <div class="thead-bar"><div class="thead-title">👥 Users</div><input class="srch" id="usr-srch" placeholder="Search users…"></div>
-          <table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Department</th><th>Assigned</th><th>Calls Logged</th><th>Actions</th></tr></thead>
-          <tbody id="usr-tbl"></tbody></table>
+          <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Department</th><th>Assigned</th><th>Calls Logged</th><th>Actions</th></tr></thead>
+          <tbody id="usr-tbl"></tbody></table></div>
         </div>
       </div>
 
@@ -405,8 +406,8 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
         <div class="stats" id="rep-stats"></div>
         <div class="tcard">
           <div class="thead-bar"><div class="thead-title">📊 Agent Performance</div></div>
-          <table><thead><tr><th>Agent</th><th>Assigned</th><th>Calls Logged</th><th>Open</th><th>Closed</th><th>Completion</th></tr></thead>
-          <tbody id="rep-tbl"></tbody></table>
+          <div class="tbl-wrap"><table><thead><tr><th>Agent</th><th>Assigned</th><th>Calls Logged</th><th>Open</th><th>Closed</th><th>Completion</th></tr></thead>
+          <tbody id="rep-tbl"></tbody></table></div>
         </div>
         <div class="tcard">
           <div class="thead-bar"><div class="thead-title">📈 Distribution</div></div>
@@ -876,6 +877,12 @@ function doLogout() {
   showLogin();
 }
 
+function openReconfigure() {
+  if (!confirm('Go to Setup screen to change Sheet ID or API Key?')) return;
+  localStorage.removeItem('vericrm_cfg');
+  location.reload();
+}
+
 // ═══════════════════════════════════════════════════
 //  APP INIT
 // ═══════════════════════════════════════════════════
@@ -934,6 +941,7 @@ function buildSidebar() {
     html += `<div class="nav-it" onclick="openDateModal()"><span style="font-size:15px">📅</span>Date Filter</div>`;
     html += `<div class="nav-it" onclick="hardRefresh()"><span style="font-size:15px">🔄</span>Refresh Sheet</div>`;
     html += `<div class="nav-it" onclick="exportLogs()"><span style="font-size:15px">📥</span>Export Logs CSV</div>`;
+    html += `<div class="nav-it" onclick="openReconfigure()"><span style="font-size:15px">⚙️</span>Reconfigure</div>`;
   }
   document.getElementById('sb-nav').innerHTML = html;
 }
@@ -1036,17 +1044,19 @@ function renderMyTable() {
   if (flt) leads = leads.filter(l => l.callStatus === flt);
   const page = paginate(leads, myPage, PS);
   document.getElementById('my-tbl').innerHTML = page.length
-    ? page.map(l => `<tr>
-        <td class="mono">${l.agentId}</td>
-        <td><strong>${l.name}</strong></td>
-        <td class="mono">${l.number}</td>
-        <td>${l.location}</td>
-        <td>${bDoc(l.status)}</td>
-        <td>${bCall(l.callStatus)}</td>
-        <td class="mono">${l.callLogs.length ? l.callLogs[l.callLogs.length-1].date : '—'}</td>
-        <td><button class="act-btn" onclick="openLog('${l.agentId}')">📞 Log Call</button></td>
-      </tr>`).join('')
-    : `<tr><td colspan="8"><div class="empty"><div class="empty-ico">📭</div>No leads found</div></td></tr>`;
+    ? page.map(l => {
+        const lastDate = l.callLogs.length ? l.callLogs[l.callLogs.length-1].date : '—';
+        return `<tr>
+          <td class="mono" style="white-space:nowrap">${l.agentId}</td>
+          <td style="min-width:130px"><strong>${l.name}</strong><br><span style="font-family:var(--mono);font-size:11px;color:var(--txt2)">${l.number}</span></td>
+          <td style="min-width:90px">${l.location}</td>
+          <td>${bDoc(l.status)}</td>
+          <td style="min-width:100px">${bCall(l.callStatus)}</td>
+          <td class="mono" style="white-space:nowrap">${lastDate}</td>
+          <td style="white-space:nowrap"><button class="act-btn" onclick="openLog('${l.agentId}')">📞 Log Call</button></td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="7"><div class="empty"><div class="empty-ico">📭</div>No leads found</div></td></tr>`;
   document.getElementById('my-pag').innerHTML = pagHtml(leads.length, myPage, PS, 'setMyPage', 'leads');
 }
 
