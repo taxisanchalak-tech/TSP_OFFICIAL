@@ -438,7 +438,10 @@ tr.is-verified{cursor:default}
               <input class="inp" id="ag-date-from" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderAgentDashboard()">
               <span style="font-size:12px;color:var(--txt2)">to</span>
               <input class="inp" id="ag-date-to" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderAgentDashboard()">
-              <button class="btn btn-s btn-sm" onclick="clearAgentDates()">Clear</button>
+              <button class="btn btn-s btn-sm" onclick="setAgQuick(1)">Today</button>
+              <button class="btn btn-s btn-sm" onclick="setAgQuick(7)">7d</button>
+              <button class="btn btn-s btn-sm" onclick="setAgQuick(30)">30d</button>
+              <button class="btn btn-s btn-sm" onclick="clearAgentDates()">All</button>
             </div>
           </div>
           <div class="tbl-wrap">
@@ -879,10 +882,10 @@ function saveCfg() {
 //  LOCAL USERS  (stored in localStorage)
 // ═══════════════════════════════════════════════════
 const DEFAULT_USERS = [
-  { id:'u1', name:'Main Admin',    username:'admin',   password:'1234', role:'admin',   dept:'both',            sheetName:'' },
-  { id:'u2', name:'Dipesh', username:'dipesh',  password:'123456', role:'manager', dept:'id_verification', sheetName:'DIPESH' },
-  { id:'u3', name:'Kanchan',  username:'kanchan', password:'123456', role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
-  { id:'u4', name:'Nishu',     username:'agent1',  password:'123456', role:'agent',   dept:'id_verification', sheetName:'nisha' },
+  { id:'u1', name:'mayank Admin',    username:'admin',   password:'1234', role:'admin',   dept:'both',            sheetName:'' },
+  { id:'u2', name:'Dipesh', username:'dipesh',  password:'123456', role:'agent', dept:'id_verification', sheetName:'DIPESH' },
+  { id:'u3', name:'nisha g',  username:'kanchan', password:'123456', role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
+  { id:'u4', name:'ID Agent 1',     username:'agent1',  password:'1234', role:'agent',   dept:'id_verification', sheetName:'ID VERIFICATION' },
   { id:'u5', name:'Recharge Agent', username:'ragent1', password:'1234', role:'agent',   dept:'recharge',        sheetName:'RECHARGE' },
 ];
 
@@ -1143,7 +1146,7 @@ async function loadLeads() {
             return {
               status: lg.callStatus || lg.status || '',
               remark: lg.remarks    || lg.remark || '',
-              date:   lg.callDate   || lg.date   || '',
+              date:   normD(lg.callDate || lg.date || ''),
               by:     lg.calledBy   || lg.by     || '',
             };
           })
@@ -1637,6 +1640,18 @@ function clearAgentDates() {
   renderAgentDashboard();
 }
 
+function setAgQuick(days) {
+  var to   = new Date();
+  var from = new Date();
+  from.setDate(from.getDate() - (days-1));
+  var fmt = function(d){ return d.toISOString().split('T')[0]; };
+  var f = document.getElementById('ag-date-from');
+  var t = document.getElementById('ag-date-to');
+  if (f) f.value = fmt(from);
+  if (t) t.value = fmt(to);
+  renderAgentDashboard();
+}
+
 function renderAgentDashboard() {
   var view = document.getElementById('v-agent-dashboard');
   if (view) view.classList.add('active');
@@ -1672,11 +1687,16 @@ function renderAgentDashboard() {
   var notCalled = myL.filter(function(l){ return l.callStatus === 'NOT CALLED'; }).length;
 
   var statsEl = document.getElementById('ag-dash-stats');
+    // All-time verified (from sheet status)
+  var verAllTime  = myL.filter(function(l){ return l.status==='Verified'; }).length;
+  var uverAllTime = total - verAllTime;
+  var rangeStr    = (from||to) ? ((from||'start')+' → '+(to||'today')) : 'all time';
+
   if (statsEl) statsEl.innerHTML =
     '<div class="stat blue"><div class="stat-lbl">Total Assigned</div><div class="stat-val">' + total + '</div><div class="stat-sub">your leads</div></div>' +
-    '<div class="stat green"><div class="stat-lbl">Verified</div><div class="stat-val">' + ver + '</div><div class="stat-sub">' + (total ? Math.round(ver/total*100) : 0) + '%</div></div>' +
-    '<div class="stat amber"><div class="stat-lbl">Calls Done</div><div class="stat-val">' + callsDone + '</div><div class="stat-sub">' + (from||to ? (from||'start') + ' → ' + (to||'now') : 'all time') + '</div></div>' +
-    '<div class="stat red"><div class="stat-lbl">Remaining</div><div class="stat-val">' + notCalled + '</div><div class="stat-sub">' + open + ' open · ' + closed + ' closed</div></div>';
+    '<div class="stat green"><div class="stat-lbl">Verified</div><div class="stat-val">' + verAllTime + '</div><div class="stat-sub">' + (total ? Math.round(verAllTime/total*100) : 0) + '% all time</div></div>' +
+    '<div class="stat amber"><div class="stat-lbl">Calls Done</div><div class="stat-val">' + callsDone + '</div><div class="stat-sub">' + rangeStr + '</div></div>' +
+    '<div class="stat red"><div class="stat-lbl">Unverified</div><div class="stat-val">' + uverAllTime + '</div><div class="stat-sub">' + notCalled + ' not called yet</div></div>';
 
   // Call history table — sorted newest first
   allLogs.sort(function(a,b){ return (b.log.date||'').localeCompare(a.log.date||''); });
@@ -1699,7 +1719,7 @@ function renderAgentDashboard() {
           '<td style="font-size:12px">' + l.location + '</td>' +
           '<td>' + bDoc(l.status) + '</td>' +
           '<td>' + bCall(lg.status) + '</td>' +
-          '<td class="mono" style="font-size:11px">' + (lg.date||'—') + '</td>' +
+          '<td class="mono" style="font-size:11px">' + (normD(lg.date)||'—') + '</td>' +
           '<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">' + (lg.remark||'—') + '</td>' +
           '</tr>';
       });
@@ -2058,7 +2078,7 @@ async function saveLog() {
     docStatus:  lead.status,
     callStatus: status,
     remarks:    remark,
-    callDate:   date,
+    callDate:   normD(date),   // always store as YYYY-MM-DD
     calledBy:   CU.name,
   };
 
@@ -2322,6 +2342,21 @@ function toast(msg, type='ok') {
 // ═══════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════
+// ── Global date normalizer ─────────────────────────
+function normD(dateStr) {
+  if (!dateStr) return '';
+  var s = String(dateStr).trim();
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Try parsing and formatting
+  var d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var dy = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + dy;
+}
+
 loadCfg();
 // Clear stale user cache on every boot — sheet is source of truth
 localStorage.removeItem('vericrm_users');
@@ -2491,7 +2526,7 @@ function renderReports() {
 
   function normDate(lead) {
     return (lead.callLogs||[]).map(function(lg){
-      return Object.assign({},lg,{date:lg.callDate||lg.date||''});
+      return Object.assign({},lg,{date:normD(lg.callDate||lg.date||'')});
     });
   }
 
@@ -2507,12 +2542,25 @@ function renderReports() {
     return normDate(l).some(function(lg){ return lg.date && inDateRange(lg.date); });
   }).length;
 
-  // Verified/Unverified = ALL TIME from new_user sheet (not range filtered)
-  // Date range only affects CALLS count
-  var verInRange  = L.filter(function(l){ return l.status==='Verified'; }).length;
-  var uverInRange = L.filter(function(l){ return l.status!=='Verified'; }).length;
-  var totVer  = verInRange;
-  var totUver = uverInRange;
+  // Verified/Unverified = leads that have a call log in the date range
+  // No range = all time
+  function hasCallInRange(lead) {
+    if (!from && !to) return true;
+    return (lead.callLogs||[]).some(function(lg){
+      var d = normD(lg.callDate||lg.date||'');
+      if (from && d < from) return false;
+      if (to   && d > to)   return false;
+      return d !== '';
+    });
+  }
+  var verInRange  = L.filter(function(l){
+    return l.status==='Verified' && hasCallInRange(l);
+  }).length;
+  var uverInRange = L.filter(function(l){
+    return l.status!=='Verified' && hasCallInRange(l);
+  }).length;
+  var totVer  = L.filter(function(l){ return l.status==='Verified'; }).length;
+  var totUver = L.length - totVer;
   var rangeLabel = (from||to) ? ((from||'start')+' → '+(to||'today')) : 'all time';
 
   document.getElementById('rep-stats').innerHTML =
@@ -2522,31 +2570,30 @@ function renderReports() {
     '<div class="stat red"><div class="stat-lbl">Unverified</div><div class="stat-val">'+uverInRange+'</div><div class="stat-sub">join date · '+rangeLabel+'</div></div>';
 
   // Verified/Unverified summary card
-  var allTimeVer   = L.filter(function(l){ return l.status==='Verified'; }).length;
-  var allTimeUver  = tot - allTimeVer;
-  var verPct       = tot ? Math.round(allTimeVer/tot*100) : 0;
-  var rangeVerPct  = (verInRange+uverInRange) ? Math.round(verInRange/(verInRange+uverInRange)*100) : 0;
+  var rangeVerPct = (verInRange+uverInRange) ? Math.round(verInRange/(verInRange+uverInRange)*100) : 0;
   var sumEl = document.getElementById('rep-ver-summary');
   if (sumEl) sumEl.innerHTML =
-    '<div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:14px;text-align:center">' +
-      '<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase">All Time Verified</div>' +
-      '<div style="font-size:26px;font-weight:800;color:var(--acc2);font-family:var(--dis)">' + allTimeVer + '</div>' +
-      '<div style="font-size:11px;color:var(--txt2)">' + verPct + '% of total</div>' +
+    '<div style="background:var(--surf2);border:1px solid rgba(6,214,160,.25);border-radius:8px;padding:14px;text-align:center">' +
+      '<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase">Verified</div>' +
+      '<div style="font-size:28px;font-weight:800;color:var(--acc2);font-family:var(--dis)">' + verInRange + '</div>' +
+      '<div style="font-size:11px;color:var(--acc2)">' + rangeVerPct + '% · ' + rangeLabel + '</div>' +
+      '<div style="font-size:10px;color:var(--txt3);margin-top:3px">All time: ' + totVer + '</div>' +
+    '</div>' +
+    '<div style="background:var(--surf2);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:14px;text-align:center">' +
+      '<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase">Unverified</div>' +
+      '<div style="font-size:28px;font-weight:800;color:var(--acc3);font-family:var(--dis)">' + uverInRange + '</div>' +
+      '<div style="font-size:11px;color:var(--acc3)">' + (100-rangeVerPct) + '% · ' + rangeLabel + '</div>' +
+      '<div style="font-size:10px;color:var(--txt3);margin-top:3px">All time: ' + totUver + '</div>' +
     '</div>' +
     '<div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:14px;text-align:center">' +
-      '<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase">All Time Unverified</div>' +
-      '<div style="font-size:26px;font-weight:800;color:var(--acc3);font-family:var(--dis)">' + allTimeUver + '</div>' +
-      '<div style="font-size:11px;color:var(--txt2)">' + (100-verPct) + '% of total</div>' +
+      '<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase">Calls Done</div>' +
+      '<div style="font-size:28px;font-weight:800;color:var(--acc);font-family:var(--dis)">' + callsInRange + '</div>' +
+      '<div style="font-size:11px;color:var(--acc)">' + rangeLabel + '</div>' +
     '</div>' +
-    '<div style="background:var(--surf2);border:1px solid rgba(6,214,160,.2);border-radius:8px;padding:14px;text-align:center">' +
-      '<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase">Verified in Range</div>' +
-      '<div style="font-size:26px;font-weight:800;color:var(--acc2);font-family:var(--dis)">' + verInRange + '</div>' +
-      '<div style="font-size:11px;color:var(--acc2)">' + rangeVerPct + '% · ' + rangeText + '</div>' +
-    '</div>' +
-    '<div style="background:var(--surf2);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:14px;text-align:center">' +
-      '<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase">Unverified in Range</div>' +
-      '<div style="font-size:26px;font-weight:800;color:var(--acc3);font-family:var(--dis)">' + uverInRange + '</div>' +
-      '<div style="font-size:11px;color:var(--acc3)">' + (100-rangeVerPct) + '% · ' + rangeText + '</div>' +
+    '<div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:14px;text-align:center">' +
+      '<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase">Total Leads</div>' +
+      '<div style="font-size:28px;font-weight:800;color:var(--txt);font-family:var(--dis)">' + tot + '</div>' +
+      '<div style="font-size:11px;color:var(--txt2)">from ' + CFG.filterDate + '</div>' +
     '</div>';
 
   // Apply agent filter if selected
@@ -2559,10 +2606,10 @@ function renderReports() {
     const sn  = (a.sheetName||'').trim().toUpperCase();
     const ass = L.filter(function(l){ return l.assignedTo.trim().toUpperCase()===sn; });
 
-    // Normalize logs — Apps Script uses callDate, local uses date
+    // Normalize logs — normalize date to YYYY-MM-DD always
     function normLogs(lead) {
       return (lead.callLogs||[]).map(function(lg){
-        return { ...lg, date: lg.callDate||lg.date||'' };
+        return Object.assign({},lg,{ date: normD(lg.callDate||lg.date||'') });
       });
     }
 
@@ -2576,9 +2623,19 @@ function renderReports() {
       });
     }).length;
 
-    // Verified/Unverified = ALL TIME (date range only affects calls count)
-    const verTotal  = ass.filter(function(l){ return l.status==='Verified'; }).length;
-    const uverTotal = ass.filter(function(l){ return l.status!=='Verified'; }).length;
+    // Verified/Unverified = leads that have a call log in the date range
+    function hasCall(lead) {
+      if (!from && !to) return true;
+      return (lead.callLogs||[]).some(function(lg){
+        var d = normD(lg.callDate||lg.date||'');
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to   && d > to)   return false;
+        return true;
+      });
+    }
+    const verTotal  = ass.filter(function(l){ return l.status==='Verified'  && hasCall(l); }).length;
+    const uverTotal = ass.filter(function(l){ return l.status!=='Verified'  && hasCall(l); }).length;
 
     // In range: verified leads that got a call in range
     const verInRange = ass.filter(function(l){
