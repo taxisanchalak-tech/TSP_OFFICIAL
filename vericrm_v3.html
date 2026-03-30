@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>TSP CRM — TAXI SANCHALAK | ID Verification</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -464,20 +467,26 @@ tr.is-verified{cursor:default}
 
 
 
-        <!-- Leads table with tabs inside -->
+        <!-- Leads table with tabs + filters -->
         <div class="tcard">
-          <div style="padding:10px 18px 0;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div style="padding:10px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
             <div class="vtab-bar" style="margin-bottom:0">
-              <button class="vtab active" id="vtab-all" onclick="switchLeadTab('all')">All Leads</button>
-              <button class="vtab" id="vtab-verified" onclick="switchLeadTab('verified')">✓ Verified</button>
+              <button class="vtab active" id="vtab-all"        onclick="switchLeadTab('all')">All</button>
+              <button class="vtab"        id="vtab-verified"   onclick="switchLeadTab('verified')">✓ Verified</button>
+              <button class="vtab"        id="vtab-unverified" onclick="switchLeadTab('unverified')">⚠ Unverified</button>
             </div>
-            <div class="controls">
-              <input class="srch" id="my-srch" placeholder="Search name / number…">
+            <div class="controls" style="flex-wrap:wrap;gap:6px">
+              <input class="srch" id="my-srch" placeholder="Search name / number…" style="width:160px">
               <select class="fsel" id="my-flt">
                 <option value="">All Call Status</option>
                 <option value="OPEN">OPEN</option>
                 <option value="CLOSE">CLOSE</option>
                 <option value="NOT CALLED">Not Called</option>
+              </select>
+              <select class="fsel" id="my-flt-adhar">
+                <option value="">All Adhar</option>
+                <option value="filled">● Adhar Filled</option>
+                <option value="blank">— Adhar Blank</option>
               </select>
             </div>
           </div>
@@ -1058,25 +1067,39 @@ async function loadLeads() {
 
   showLoader('Fetching leads from Google Sheet…');
 
-  // ── If Apps Script URL is configured, use it (reads + merges entries) ──
+  // ── If Apps Script URL is configured, use it ──
   if (CFG.scriptUrl) {
     try {
-      const url = CFG.scriptUrl + '?action=getLeads&key=' + encodeURIComponent(CFG.secretKey)
-                + '&fromDate=' + encodeURIComponent(CFG.filterDate);
+      // Agents only fetch their own assigned data — much faster
+      const isAgent = CU && CU.role === 'agent';
+      const agentFilter = isAgent && CU.sheetName
+        ? '&assignedTo=' + encodeURIComponent(CU.sheetName.trim().toUpperCase())
+        : '';
+
+      const url = CFG.scriptUrl
+        + '?action=getLeads&key=' + encodeURIComponent(CFG.secretKey)
+        + '&fromDate='            + encodeURIComponent(CFG.filterDate)
+        + agentFilter
+        + '&t='                   + Date.now(); // prevent cache
+
+      showLoader(isAgent ? 'Loading your leads…' : 'Loading all leads…');
       const res  = await fetch(url);
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || 'Script error');
 
-      LEADS = json.leads.map(l => ({
-        ...l,
-        id: 'lead_' + l.agentId,
-        callLogs: (l.callLogs || []).map(lg => ({
-          status: lg.callStatus || lg.status || '',
-          remark: lg.remarks    || lg.remark || '',
-          date:   lg.callDate   || lg.date   || '',
-          by:     lg.calledBy   || lg.by     || '',
-        }))
-      }));
+      LEADS = json.leads.map(function(l) {
+        return Object.assign({}, l, {
+          id: 'lead_' + l.agentId,
+          callLogs: (l.callLogs || []).map(function(lg) {
+            return {
+              status: lg.callStatus || lg.status || '',
+              remark: lg.remarks    || lg.remark || '',
+              date:   lg.callDate   || lg.date   || '',
+              by:     lg.calledBy   || lg.by     || '',
+            };
+          })
+        });
+      });
 
       autoDistribute();
       hideLoader();
@@ -1085,7 +1108,6 @@ async function loadLeads() {
     } catch(err) {
       hideLoader();
       toast('⚠ Script error: ' + err.message + ' — trying API key…', 'err');
-      // Fall through to API key method
     }
   }
 
@@ -1645,8 +1667,11 @@ let myLeadTab = 'all';
 function switchLeadTab(tab) {
   myLeadTab = tab;
   myPage = 1;
-  document.getElementById('vtab-all').classList.toggle('active', tab==='all');
-  document.getElementById('vtab-verified').classList.toggle('active', tab==='verified');
+  var tabs = ['all','verified','unverified'];
+  tabs.forEach(function(t) {
+    var el = document.getElementById('vtab-' + t);
+    if (el) el.classList.toggle('active', t === tab);
+  });
   renderMyTable();
 }
 
@@ -1660,6 +1685,8 @@ function renderMyLeads() {
     var flt  = document.getElementById('my-flt');
     if (srch) srch.oninput  = function(){ myPage=1; renderMyTable(); };
     if (flt)  flt.onchange  = function(){ myPage=1; renderMyTable(); };
+    var adharFltEl = document.getElementById('my-flt-adhar');
+    if (adharFltEl) adharFltEl.onchange = function(){ myPage=1; renderMyTable(); };
   }, 50);
 }
 
@@ -1724,11 +1751,20 @@ function renderMyTable() {
   const q   = srchEl ? srchEl.value.toLowerCase() : '';
   const flt = fltEl  ? fltEl.value : '';
   // Sort by join date — newest first
+  var adharFlt = document.getElementById('my-flt-adhar') ? document.getElementById('my-flt-adhar').value : '';
+
   let leads = myLeads().slice().sort(function(a,b){
     return (b.joinDate || '').localeCompare(a.joinDate || '');
   });
 
-  if (myLeadTab === 'verified') leads = leads.filter(function(l){ return l.status==='Verified'; });
+  // Tab filter
+  if (myLeadTab === 'verified')   leads = leads.filter(function(l){ return l.status==='Verified'; });
+  if (myLeadTab === 'unverified') leads = leads.filter(function(l){ return l.status!=='Verified'; });
+
+  // Adhar filter
+  if (adharFlt === 'filled') leads = leads.filter(function(l){ return l.adhar && l.adhar.trim(); });
+  if (adharFlt === 'blank')  leads = leads.filter(function(l){ return !l.adhar || !l.adhar.trim(); });
+
   if (q)   leads = leads.filter(function(l){ return l.name.toLowerCase().indexOf(q)>-1 || l.number.indexOf(q)>-1; });
   if (flt) leads = leads.filter(function(l){ return l.callStatus===flt; });
 
@@ -2418,43 +2454,72 @@ function renderReports() {
   const op  = L.filter(l => l.callStatus==='OPEN').length;
   const cl  = L.filter(l => l.callStatus==='CLOSE').length;
 
-  document.getElementById('rep-stats').innerHTML = `
-    <div class="stat blue"><div class="stat-lbl">Total Leads</div><div class="stat-val">${tot}</div><div class="stat-sub">from ${CFG.filterDate}</div></div>
-    <div class="stat amber"><div class="stat-lbl">Calls in Range</div><div class="stat-val">${tc}</div><div class="stat-sub">${from||'all'} → ${to||'now'}</div></div>
-    <div class="stat blue"><div class="stat-lbl">Open</div><div class="stat-val">${op}</div><div class="stat-sub">in progress</div></div>
-    <div class="stat green"><div class="stat-lbl">Closed</div><div class="stat-val">${cl}</div><div class="stat-sub">completed</div></div>`;
+  // Total verified/unverified across all agents
+  const totVer  = L.filter(function(l){ return l.status==='Verified'; }).length;
+  const totUver = tot - totVer;
+
+  // Calls in range = leads that have at least one log in range
+  function normLogs2(lead) {
+    return (lead.callLogs||[]).map(function(lg){ return {...lg, date:lg.callDate||lg.date||''}; });
+  }
+  const tcInRange = L.filter(function(l){ return logsInRange(normLogs2(l),from,to).length>0; }).length;
+
+  document.getElementById('rep-stats').innerHTML =
+    '<div class="stat blue"><div class="stat-lbl">Total Leads</div><div class="stat-val">'+tot+'</div><div class="stat-sub">from '+CFG.filterDate+'</div></div>' +
+    '<div class="stat amber"><div class="stat-lbl">Calls in Range</div><div class="stat-val">'+tcInRange+'</div><div class="stat-sub">'+(from||'all')+' → '+(to||'now')+'</div></div>' +
+    '<div class="stat green"><div class="stat-lbl">Verified</div><div class="stat-val">'+totVer+'</div><div class="stat-sub">'+(tot?Math.round(totVer/tot*100):0)+'%</div></div>' +
+    '<div class="stat red"><div class="stat-lbl">Unverified</div><div class="stat-val">'+totUver+'</div><div class="stat-sub">'+(tot?Math.round(totUver/tot*100):0)+'%</div></div>';
 
   const agents = getUsers().filter(u => u.role==='agent');
 
   // Build per-agent data
-  const agData = agents.map(a => {
-    const sn      = (a.sheetName||'').trim().toUpperCase();
-    const ass     = L.filter(l => l.assignedTo.trim().toUpperCase()===sn);
-    const allLogs = ass.reduce((acc,l) => acc.concat(logsInRange(l.callLogs, from, to)), []);
-    const called  = new Set(allLogs.map(lg => lg.by === a.name).filter(Boolean));
-    // Verified in date range = leads that are Verified AND have a log in range
-    const verInRange  = ass.filter(l => l.status==='Verified' && logsInRange(l.callLogs,from,to).length>0).length;
-    const unverInRange= ass.filter(l => l.status!=='Verified' && logsInRange(l.callLogs,from,to).length>0).length;
-    const callsDone   = ass.filter(l => logsInRange(l.callLogs,from,to).length>0).length;
-    const remaining   = ass.filter(l => l.callStatus==='NOT CALLED').length;
-    const openC       = ass.filter(l => l.callStatus==='OPEN').length;
-    const closedC     = ass.filter(l => l.callStatus==='CLOSE').length;
-    return { a, ass, verInRange, unverInRange, callsDone, remaining, openC, closedC, total: ass.length };
+  const agData = agents.map(function(a) {
+    const sn  = (a.sheetName||'').trim().toUpperCase();
+    const ass = L.filter(function(l){ return l.assignedTo.trim().toUpperCase()===sn; });
+
+    // Normalize logs — Apps Script uses callDate, local uses date
+    function normLogs(lead) {
+      return (lead.callLogs||[]).map(function(lg){
+        return { ...lg, date: lg.callDate||lg.date||'' };
+      });
+    }
+
+    // Leads that have at least one call in the date range
+    const callsDone = ass.filter(function(l){
+      return logsInRange(normLogs(l), from, to).length > 0;
+    }).length;
+
+    // Total verified / unverified (all time — not range dependent)
+    const verTotal  = ass.filter(function(l){ return l.status==='Verified'; }).length;
+    const uverTotal = ass.length - verTotal;
+
+    // In range: verified leads that got a call in range
+    const verInRange = ass.filter(function(l){
+      return l.status==='Verified' && logsInRange(normLogs(l),from,to).length>0;
+    }).length;
+
+    const remaining = ass.filter(function(l){ return l.callStatus==='NOT CALLED'; }).length;
+    const openC     = ass.filter(function(l){ return l.callStatus==='OPEN'; }).length;
+    const closedC   = ass.filter(function(l){ return l.callStatus==='CLOSE'; }).length;
+
+    return { a, ass, callsDone, verTotal, uverTotal, verInRange, remaining, openC, closedC, total: ass.length };
   });
+  window._repAgData = agData;
 
   // Table
-  document.getElementById('rep-tbl').innerHTML = agData.map(d => `
-    <tr style="cursor:pointer" onclick="openAgentAnalytics('${d.a.id}')">
-      <td><strong>${d.a.name}</strong><br><span class="mono" style="font-size:10px;color:var(--txt2)">${d.a.sheetName||d.a.username}</span></td>
-      <td class="mono" style="color:var(--acc)">${d.total}</td>
-      <td class="mono" style="color:var(--acc2)">${d.a.total || d.ass.filter(l=>l.status==='Verified').length}</td>
-      <td class="mono" style="color:var(--acc3)">${d.ass.filter(l=>l.status!=='Verified').length}</td>
-      <td class="mono" style="color:var(--acc)">${d.callsDone || d.ass.filter(l=>l.callLogs&&l.callLogs.length>0).length}</td>
-      <td class="mono" style="color:var(--txt2)">${d.remaining}</td>
-      <td><span class="badge b-open">${d.openC}</span></td>
-      <td><span class="badge b-close">${d.closedC}</span></td>
-      <td><button class="act-btn" onclick="openAgentAnalytics('${d.a.id}');event.stopPropagation()">📊 View</button></td>
-    </tr>`).join('');
+  document.getElementById('rep-tbl').innerHTML = agData.map(function(d) {
+    return '<tr style="cursor:pointer" onclick="openAgentAnalytics(\'' + d.a.id + '\')">' +
+      '<td><strong>' + d.a.name + '</strong><br><span class="mono" style="font-size:10px;color:var(--txt2)">' + (d.a.sheetName||d.a.username) + '</span></td>' +
+      '<td class="mono" style="color:var(--acc)">' + d.total + '</td>' +
+      '<td class="mono" style="color:var(--acc2)">' + (d.verTotal||0) + '</td>' +
+      '<td class="mono" style="color:var(--acc3)">' + (d.uverTotal||0) + '</td>' +
+      '<td class="mono" style="color:var(--acc)">' + d.callsDone + '</td>' +
+      '<td class="mono" style="color:var(--txt2)">' + d.remaining + '</td>' +
+      '<td><span class="badge b-open">' + d.openC + '</span></td>' +
+      '<td><span class="badge b-close">' + d.closedC + '</span></td>' +
+      '<td><button class="act-btn" onclick="openAgentAnalytics(\'' + d.a.id + '\');event.stopPropagation()">View</button></td>' +
+      '</tr>';
+  }).join('');;
 
   // Bar Chart
   renderRepChart(agData);
@@ -2483,7 +2548,7 @@ function renderRepChart(agData) {
           sets.push({ label: 'Remaining',   data: agData.map(function(d){return d.remaining;}), backgroundColor: 'rgba(239,68,68,0.5)', borderRadius: 4 });
         }
         if (metric==='all'||metric==='verified') {
-          sets.push({ label: 'Verified', data: agData.map(function(d){return d.ass.filter(function(l){return l.status==='Verified';}).length;}), backgroundColor: 'rgba(6,214,160,0.7)', borderRadius: 4 });
+          sets.push({ label: 'Verified', data: agData.map(function(d){return d.verTotal||0;}), backgroundColor: 'rgba(6,214,160,0.7)', borderRadius: 4 });
         }
         return sets;
       })()
