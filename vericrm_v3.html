@@ -761,6 +761,42 @@ tr.is-verified{cursor:default}
   </div>
 </div>
 
+<!-- Share Link Modal -->
+<div class="overlay" id="m-share">
+  <div class="modal">
+    <div class="m-hdr"><div class="m-title">🔗 Share CRM Link</div><button class="m-close" onclick="closeModal('m-share')">✕</button></div>
+    <div class="m-body">
+      <div class="info-ban">Share this link with your agents. They will go directly to the login screen — no setup needed.</div>
+      <div class="fg">
+        <label class="lbl">Current Share Link</label>
+        <div style="display:flex;gap:8px">
+          <input class="inp" id="share-link-val" type="text" readonly style="font-size:11px;font-family:var(--mono)">
+          <button class="btn btn-s btn-sm" onclick="copyShareLink()" style="white-space:nowrap">📋 Copy</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="lbl">Version Number</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="inp" id="share-ver-num" type="number" min="1" max="99" style="width:80px" value="3">
+          <span style="font-size:12px;color:var(--txt2)">increment this each time you push an update</span>
+        </div>
+      </div>
+      <div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px;font-size:12px;color:var(--txt2);line-height:1.7">
+        <strong style="color:var(--txt)">How to use:</strong><br>
+        1. Add all agents via Manage Users<br>
+        2. Push updated HTML to GitHub<br>
+        3. Copy this link → send on WhatsApp<br>
+        4. Agents open → login with name + PIN<br>
+        5. Next update → increment version → share again
+      </div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-s btn-sm" onclick="closeModal('m-share')">Close</button>
+      <button class="btn btn-p btn-sm" onclick="copyShareLink()">📋 Copy & Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Assign Modal -->
 <div class="overlay" id="m-assign">
   <div class="modal">
@@ -796,9 +832,9 @@ tr.is-verified{cursor:default}
 //  then all users share the file without setup
 // ════════════════════════════════════════════
 const BAKED = {
-  sheetId:    '',           // ← paste your Sheet ID here
-  apiKey:     '',           // ← paste your API Key here
-  scriptUrl:  '',           // ← paste your Apps Script URL here
+  sheetId:    '1joFxF1g26KhKgVFDmPM-2krU0ptKy77ycqNQrQ68dzM',           // ← paste your Sheet ID here
+  apiKey:     'AIzaSyAzeuvMMuvmovuVpRPeh81HmoA50y4fGE4',           // ← paste your API Key here
+  scriptUrl:  'https://script.google.com/macros/s/AKfycbyBQM3bOCtNTflJmX88QhaOiPUCx6MgT4k4DEQTG8gMbRffb1DpOapcFmTNAvdhN4q9Zw/exec',           // ← paste your Apps Script URL here
   secretKey:  'vericrm2026',
   sheetTab:   'new_user',
   logsTab:    'CALL_LOGS',
@@ -843,10 +879,10 @@ function saveCfg() {
 //  LOCAL USERS  (stored in localStorage)
 // ═══════════════════════════════════════════════════
 const DEFAULT_USERS = [
-  { id:'u1', name:'Super Admin',    username:'admin',   password:'1234', role:'admin',   dept:'both',            sheetName:'' },
-  { id:'u2', name:'Dipesh Manager', username:'dipesh',  password:'1234', role:'manager', dept:'id_verification', sheetName:'DIPESH' },
-  { id:'u3', name:'Kanchan Agent',  username:'kanchan', password:'1234', role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
-  { id:'u4', name:'ID Agent 1',     username:'agent1',  password:'1234', role:'agent',   dept:'id_verification', sheetName:'ID VERIFICATION' },
+  { id:'u1', name:'Main Admin',    username:'admin',   password:'1234', role:'admin',   dept:'both',            sheetName:'' },
+  { id:'u2', name:'Dipesh', username:'dipesh',  password:'123456', role:'manager', dept:'id_verification', sheetName:'DIPESH' },
+  { id:'u3', name:'Kanchan',  username:'kanchan', password:'123456', role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
+  { id:'u4', name:'Nishu',     username:'agent1',  password:'123456', role:'agent',   dept:'id_verification', sheetName:'nisha' },
   { id:'u5', name:'Recharge Agent', username:'ragent1', password:'1234', role:'agent',   dept:'recharge',        sheetName:'RECHARGE' },
 ];
 
@@ -1380,6 +1416,7 @@ function buildSidebar() {
   });
   if (role === 'admin') {
     html += '<div class="nav-sec" style="margin-top:14px">Tools</div>';
+    html += `<div class="nav-it" onclick="showShareLink()"><span style="font-size:15px">🔗</span>Share Link</div>`;
     html += `<div class="nav-it" onclick="openDateModal()"><span style="font-size:15px">📅</span>Date Filter</div>`;
     html += `<div class="nav-it" onclick="hardRefresh()"><span style="font-size:15px">🔄</span>Refresh Sheet</div>`;
     html += `<div class="nav-it" onclick="exportLogs()"><span style="font-size:15px">📥</span>Export Logs CSV</div>`;
@@ -1690,9 +1727,23 @@ function switchLeadTab(tab) {
 
 function renderMyLeads() {
   document.getElementById('v-my-leads').classList.add('active');
-  // Small delay to ensure DOM is ready
   setTimeout(function() {
     renderAgentStats();
+
+    // Default view: Unverified + Not Called — show only leads needing entry
+    // Only set defaults on first load (myLeadTab still 'all')
+    if (myLeadTab === 'all') {
+      myLeadTab = 'unverified';
+      var tabs = ['all','verified','unverified'];
+      tabs.forEach(function(t) {
+        var el = document.getElementById('vtab-' + t);
+        if (el) el.classList.toggle('active', t === 'unverified');
+      });
+      // Default call status = Not Called
+      var fltEl = document.getElementById('my-flt');
+      if (fltEl) fltEl.value = 'NOT CALLED';
+    }
+
     renderMyTable();
     var srch = document.getElementById('my-srch');
     var flt  = document.getElementById('my-flt');
@@ -2456,21 +2507,12 @@ function renderReports() {
     return normDate(l).some(function(lg){ return lg.date && inDateRange(lg.date); });
   }).length;
 
-  // Verified/Unverified: filter by Join Date range from new_user sheet
-  var verInRange  = L.filter(function(l){
-    var jd = (l.joinDate||'').split(' ')[0];
-    return l.status==='Verified' && inDateRange(jd);
-  }).length;
-
-  var uverInRange = L.filter(function(l){
-    var jd = (l.joinDate||'').split(' ')[0];
-    return l.status!=='Verified' && inDateRange(jd);
-  }).length;
-
-  // All-time totals (always show regardless of range)
-  var totVer  = L.filter(function(l){ return l.status==='Verified'; }).length;
-  var totUver = tot - totVer;
-
+  // Verified/Unverified = ALL TIME from new_user sheet (not range filtered)
+  // Date range only affects CALLS count
+  var verInRange  = L.filter(function(l){ return l.status==='Verified'; }).length;
+  var uverInRange = L.filter(function(l){ return l.status!=='Verified'; }).length;
+  var totVer  = verInRange;
+  var totUver = uverInRange;
   var rangeLabel = (from||to) ? ((from||'start')+' → '+(to||'today')) : 'all time';
 
   document.getElementById('rep-stats').innerHTML =
@@ -2534,24 +2576,9 @@ function renderReports() {
       });
     }).length;
 
-    // Verified/Unverified = filter by Join Date in range (from new_user Status column)
-    const verTotal = ass.filter(function(l){
-      if (l.status !== 'Verified') return false;
-      if (!from && !to) return true;
-      var jd = (l.joinDate||'').split(' ')[0];
-      if (from && jd < from) return false;
-      if (to   && jd > to)   return false;
-      return true;
-    }).length;
-
-    const uverTotal = ass.filter(function(l){
-      if (l.status === 'Verified') return false;
-      if (!from && !to) return true;
-      var jd = (l.joinDate||'').split(' ')[0];
-      if (from && jd < from) return false;
-      if (to   && jd > to)   return false;
-      return true;
-    }).length;
+    // Verified/Unverified = ALL TIME (date range only affects calls count)
+    const verTotal  = ass.filter(function(l){ return l.status==='Verified'; }).length;
+    const uverTotal = ass.filter(function(l){ return l.status!=='Verified'; }).length;
 
     // In range: verified leads that got a call in range
     const verInRange = ass.filter(function(l){
@@ -2695,6 +2722,43 @@ function exportAgentReport() {
   a.download = 'agent_report_'+new Date().toISOString().split('T')[0]+'.csv';
   a.click();
   toast('✅ Agent report exported','ok');
+}
+
+// ═══════════════════════════════════════════════════
+//  SHARE LINK
+// ═══════════════════════════════════════════════════
+function showShareLink() {
+  // Auto-detect base URL from current page
+  var base = window.location.href.split('?')[0];
+  var saved = parseInt(localStorage.getItem('vericrm_share_ver') || '3');
+  var el = document.getElementById('share-ver-num');
+  if (el) el.value = saved;
+  updateShareLink();
+  openModal('m-share');
+}
+
+function updateShareLink() {
+  var ver  = document.getElementById('share-ver-num').value || '3';
+  var base = window.location.href.split('?')[0];
+  var link = base + '?v=' + ver;
+  var inp  = document.getElementById('share-link-val');
+  if (inp) inp.value = link;
+  localStorage.setItem('vericrm_share_ver', ver);
+}
+
+// Auto-update link when version changes
+document.addEventListener('DOMContentLoaded', function() {
+  var vEl = document.getElementById('share-ver-num');
+  if (vEl) vEl.oninput = updateShareLink;
+});
+
+function copyShareLink() {
+  updateShareLink();
+  var link = document.getElementById('share-link-val').value;
+  navigator.clipboard.writeText(link).then(function() {
+    toast('📋 Link copied! Share on WhatsApp.', 'ok');
+    closeModal('m-share');
+  });
 }
 
 // ═══════════════════════════════════════════════════
