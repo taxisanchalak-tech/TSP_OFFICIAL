@@ -346,9 +346,10 @@ tr.is-verified{cursor:default}
     <div class="topbar">
       <div class="page-title" id="pg-title">Dashboard</div>
       <div class="topbar-r">
+        <button class="btn btn-s btn-sm" onclick="hardRefresh()" style="font-size:11px;padding:5px 12px" title="Refresh data from sheet">🔄 Refresh</button>
         <span class="mode-badge live-badge" id="mode-badge">● LIVE</span>
         <span class="date-badge" id="tb-date"></span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--txt3);padding:4px 8px">v4.0</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--txt3);padding:4px 8px">v5.0</span>
       </div>
     </div>
     <div class="content">
@@ -597,6 +598,48 @@ tr.is-verified{cursor:default}
       <button class="btn btn-s btn-sm" onclick="closeModal('m-date')">Cancel</button>
       <button class="btn btn-p btn-sm" onclick="applyDateFilter()">✓ Apply & Reload</button>
     </div>
+  </div>
+</div>
+
+<!-- Lock Schedule Modal -->
+<div class="overlay" id="m-lock">
+  <div class="modal">
+    <div class="m-hdr"><div class="m-title">🔒 Entry Lock Schedule</div><button class="m-close" onclick="closeModal('m-lock')">✕</button></div>
+    <div class="m-body">
+      <div class="info-ban">When lock is active, agents <strong>cannot save new entries</strong> during the locked time window. Admin can always override.</div>
+      <div class="fg">
+        <label class="lbl">Lock Status</label>
+        <select class="sel" id="lock-enabled">
+          <option value="off">Off — agents can always enter</option>
+          <option value="on">On — enforce time window below</option>
+        </select>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label class="lbl">Lock FROM (no entry after)</label>
+          <input class="inp" id="lock-from" type="time" value="19:00">
+          <div style="font-size:11px;color:var(--txt2);margin-top:4px">e.g. 19:00 = 7 PM</div>
+        </div>
+        <div class="fg">
+          <label class="lbl">Lock TO (re-opens at)</label>
+          <input class="inp" id="lock-to" type="time" value="10:00">
+          <div style="font-size:11px;color:var(--txt2);margin-top:4px">e.g. 10:00 = 10 AM</div>
+        </div>
+      </div>
+      <div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px;font-size:12px;color:var(--txt2)" id="lock-preview"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-s btn-sm" onclick="closeModal('m-lock')">Cancel</button>
+      <button class="btn btn-p btn-sm" onclick="saveLockSchedule()">💾 Save Schedule</button>
+    </div>
+  </div>
+</div>
+
+<!-- Agent Analytics Modal -->
+<div class="overlay" id="m-analytics">
+  <div class="modal modal-lg">
+    <div class="m-hdr"><div class="m-title" id="analytics-title">Agent Analytics</div><button class="m-close" onclick="closeModal('m-analytics')">✕</button></div>
+    <div class="m-body" id="analytics-body"></div>
   </div>
 </div>
 
@@ -1016,7 +1059,8 @@ async function initApp() {
 
   await loadLeads();
   buildSidebar();
-  navigateTo('dashboard');
+  // Agents land on My Leads directly; admin/manager on Dashboard
+  navigateTo(CU.role === 'agent' ? 'my-leads' : 'dashboard');
 }
 
 async function hardRefresh() {
@@ -1050,6 +1094,7 @@ function buildSidebar() {
     html += `<div class="nav-it" onclick="hardRefresh()"><span style="font-size:15px">🔄</span>Refresh Sheet</div>`;
     html += `<div class="nav-it" onclick="exportLogs()"><span style="font-size:15px">📥</span>Export Logs CSV</div>`;
     html += `<div class="nav-it" onclick="openReconfigure()"><span style="font-size:15px">⚙️</span>Reconfigure</div>`;
+    html += `<div class="nav-it" onclick="openLockModal()"><span style="font-size:15px">🔒</span>Lock Schedule</div>`;
   }
   document.getElementById('sb-nav').innerHTML = html;
 }
@@ -1255,10 +1300,15 @@ function switchLeadTab(tab) {
 
 function renderMyLeads() {
   document.getElementById('v-my-leads').classList.add('active');
-  renderAgentStats();
-  renderMyTable();
-  document.getElementById('my-srch').oninput = () => { myPage=1; renderMyTable(); };
-  document.getElementById('my-flt').onchange  = () => { myPage=1; renderMyTable(); };
+  // Small delay to ensure DOM is ready
+  setTimeout(function() {
+    renderAgentStats();
+    renderMyTable();
+    var srch = document.getElementById('my-srch');
+    var flt  = document.getElementById('my-flt');
+    if (srch) srch.oninput  = function(){ myPage=1; renderMyTable(); };
+    if (flt)  flt.onchange  = function(){ myPage=1; renderMyTable(); };
+  }, 50);
 }
 
 function renderAgentStats() {
@@ -1284,50 +1334,65 @@ function renderAgentStats() {
 function setMyPage(p) { myPage=p; renderMyTable(); }
 
 function renderMyTable() {
-  const q   = document.getElementById('my-srch').value.toLowerCase();
-  const flt = document.getElementById('my-flt').value;
+  // null-safe element reads
+  const srchEl = document.getElementById('my-srch');
+  const fltEl  = document.getElementById('my-flt');
+  const tblEl  = document.getElementById('my-tbl');
+  const pagEl  = document.getElementById('my-pag');
+  if (!tblEl) return;
+
+  const q   = srchEl ? srchEl.value.toLowerCase() : '';
+  const flt = fltEl  ? fltEl.value : '';
   let leads = myLeads();
 
-  if (myLeadTab === 'verified') leads = leads.filter(l => l.status==='Verified');
-  if (q)   leads = leads.filter(l => l.name.toLowerCase().includes(q) || l.number.includes(q));
-  if (flt) leads = leads.filter(l => l.callStatus===flt);
+  if (myLeadTab === 'verified') leads = leads.filter(function(l){ return l.status==='Verified'; });
+  if (q)   leads = leads.filter(function(l){ return l.name.toLowerCase().indexOf(q)>-1 || l.number.indexOf(q)>-1; });
+  if (flt) leads = leads.filter(function(l){ return l.callStatus===flt; });
 
   const page = paginate(leads, myPage, PS);
-  document.getElementById('my-tbl-title').textContent =
-    myLeadTab==='verified' ? '✓ Verified Leads' : '📞 My Leads';
 
-  document.getElementById('my-tbl').innerHTML = page.length
-    ? page.map(l => {
-        const isVerified = l.status === 'Verified';
-        const hasAdhar   = l.adhar && l.adhar.trim();
-        const rowCls     = (hasAdhar ? 'has-adhar' : '') + (isVerified ? ' is-verified' : '');
-        const lastLog    = l.callLogs.length ? l.callLogs[l.callLogs.length-1] : null;
+  if (!page.length) {
+    tblEl.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-ico">📭</div>No leads found</div></td></tr>';
+    if (pagEl) pagEl.innerHTML = pagHtml(leads.length, myPage, PS, 'setMyPage', 'leads');
+    return;
+  }
 
-        const adharCell = hasAdhar
-          ? `<span style="color:var(--acc2);font-family:var(--mono);font-size:11px">● ${l.adhar}</span>`
-          : `<span style="color:var(--txt3);font-size:11px">—</span>`;
+  var rows = '';
+  for (var i = 0; i < page.length; i++) {
+    var l          = page[i];
+    var isVerified = l.status === 'Verified';
+    var hasAdhar   = l.adhar && l.adhar.trim() !== '';
+    var lastLog    = l.callLogs.length ? l.callLogs[l.callLogs.length-1] : null;
+    var rowCls     = (hasAdhar ? 'has-adhar' : '') + (isVerified ? ' is-verified' : '');
 
-        const actionCell = isVerified
-          ? `<span style="font-size:11px;color:var(--acc2);font-family:var(--mono)">🔒 Verified</span>`
-          : `<button class="act-btn" onclick="openLog('${l.agentId}')">📝 Entry</button>`;
+    var adharCell  = hasAdhar
+      ? '<span style="color:var(--acc2);font-family:var(--mono);font-size:11px">&#9679; ' + l.adhar + '</span>'
+      : '<span style="color:var(--txt3);font-size:11px">&#8212;</span>';
 
-        return `<tr class="${rowCls}">
-          <td>
-            <div style="font-weight:600;font-size:13px">${l.name}</div>
-            ${lastLog ? `<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-top:2px">${bCall(l.callStatus)}</div>` : ''}
-          </td>
-          <td class="mono" style="font-size:12px">${l.number}</td>
-          <td>${adharCell}</td>
-          <td>${bDoc(l.status)}</td>
-          <td class="mono" style="font-size:11px">${l.joinDate.split(' ')[0]}</td>
-          <td style="font-size:12px">${l.location}</td>
-          <td>${lastLog ? bCall(lastLog.status) : bCall('NOT CALLED')}</td>
-          <td style="white-space:nowrap">${actionCell}</td>
-        </tr>`;
-      }).join('')
-    : `<tr><td colspan="8"><div class="empty"><div class="empty-ico">📭</div>No leads found</div></td></tr>`;
+    var callBadge  = lastLog ? bCall(lastLog.status) : bCall('NOT CALLED');
 
-  document.getElementById('my-pag').innerHTML = pagHtml(leads.length, myPage, PS, 'setMyPage', 'leads');
+    var eid = l.agentId.replace(/'/g, '');
+    var actionCell = isVerified
+      ? '<span style="font-size:11px;color:var(--acc2);font-family:var(--mono)">Verified</span>'
+      : '<button class="act-btn" onclick="openLog(&#39;' + eid + '&#39;)">Entry</button>';
+
+    var copyBtn    = '<button class="act-btn" style="margin-left:4px" onclick="copyText(&#39;' + l.number + '&#39;);event.stopPropagation()" title="Copy number">&#128203;</button>';
+
+    var joinDate   = l.joinDate ? l.joinDate.split(' ')[0] : '';
+
+    rows += '<tr class="' + rowCls + '">'
+      + '<td><strong>' + l.name + '</strong></td>'
+      + '<td class="mono" style="font-size:12px">' + l.number + copyBtn + '</td>'
+      + '<td>' + adharCell + '</td>'
+      + '<td>' + bDoc(l.status) + '</td>'
+      + '<td class="mono" style="font-size:11px">' + joinDate + '</td>'
+      + '<td style="font-size:12px">' + l.location + '</td>'
+      + '<td>' + callBadge + '</td>'
+      + '<td style="white-space:nowrap">' + actionCell + '</td>'
+      + '</tr>';
+  }
+  tblEl.innerHTML = rows;
+  if (pagEl) pagEl.innerHTML = pagHtml(leads.length, myPage, PS, 'setMyPage', 'leads');
 }
 
 // ═══════════════════════════════════════════════════
@@ -1790,6 +1855,290 @@ if (!CFG.sheetId && !CFG.demo) {
 document.getElementById('li-pass').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════
+//  LOCK SCHEDULE
+// ═══════════════════════════════════════════════════
+function getLockSettings() {
+  const s = localStorage.getItem('vericrm_lock');
+  return s ? JSON.parse(s) : { enabled: false, from: '19:00', to: '10:00' };
+}
+
+function isEntryLocked() {
+  const lock = getLockSettings();
+  if (!lock.enabled) return false;
+  const now  = new Date();
+  const hm   = now.getHours() * 60 + now.getMinutes();
+  const [fh, fm] = lock.from.split(':').map(Number);
+  const [th, tm] = lock.to.split(':').map(Number);
+  const from = fh * 60 + fm;
+  const to   = th * 60 + tm;
+  // Lock period crosses midnight (e.g. 19:00 to 10:00)
+  if (from > to) return hm >= from || hm < to;
+  return hm >= from && hm < to;
+}
+
+function openLockModal() {
+  const s = getLockSettings();
+  document.getElementById('lock-enabled').value = s.enabled ? 'on' : 'off';
+  document.getElementById('lock-from').value    = s.from;
+  document.getElementById('lock-to').value      = s.to;
+  updateLockPreview();
+  openModal('m-lock');
+}
+
+function updateLockPreview() {
+  const en   = document.getElementById('lock-enabled').value;
+  const from = document.getElementById('lock-from').value;
+  const to   = document.getElementById('lock-to').value;
+  const el   = document.getElementById('lock-preview');
+  if (en === 'off') {
+    el.innerHTML = '<span style="color:var(--acc2)">✓ Lock is OFF — agents can enter data anytime</span>';
+  } else {
+    el.innerHTML = '<span style="color:var(--acc3)">⚠ Agents CANNOT enter data from <strong>'+from+'</strong> to <strong>'+to+'</strong> (next day)</span>';
+  }
+}
+
+document.getElementById('lock-enabled').addEventListener('change', updateLockPreview);
+document.getElementById('lock-from').addEventListener('change', updateLockPreview);
+document.getElementById('lock-to').addEventListener('change', updateLockPreview);
+
+function saveLockSchedule() {
+  const settings = {
+    enabled: document.getElementById('lock-enabled').value === 'on',
+    from:    document.getElementById('lock-from').value,
+    to:      document.getElementById('lock-to').value
+  };
+  localStorage.setItem('vericrm_lock', JSON.stringify(settings));
+  closeModal('m-lock');
+  toast('✅ Lock schedule saved', 'ok');
+}
+
+// ═══════════════════════════════════════════════════
+//  ENHANCED renderReports with Chart + Date Range
+// ═══════════════════════════════════════════════════
+let repChart = null;
+
+function clearRepDates() {
+  document.getElementById('rep-from').value = '';
+  document.getElementById('rep-to').value   = '';
+  renderReports();
+}
+
+function getRepDateRange() {
+  return {
+    from: document.getElementById('rep-from')?.value || '',
+    to:   document.getElementById('rep-to')?.value   || ''
+  };
+}
+
+function logsInRange(logs, from, to) {
+  if (!from && !to) return logs;
+  return logs.filter(lg => {
+    if (!lg.date) return false;
+    if (from && lg.date < from) return false;
+    if (to   && lg.date > to)   return false;
+    return true;
+  });
+}
+
+function renderReports() {
+  document.getElementById('v-reports').classList.add('active');
+  const { from, to } = getRepDateRange();
+  const L   = LEADS;
+  const tot = L.length;
+  const tc  = L.reduce((a,l) => a + logsInRange(l.callLogs, from, to).length, 0);
+  const op  = L.filter(l => l.callStatus==='OPEN').length;
+  const cl  = L.filter(l => l.callStatus==='CLOSE').length;
+
+  document.getElementById('rep-stats').innerHTML = `
+    <div class="stat blue"><div class="stat-lbl">Total Leads</div><div class="stat-val">${tot}</div><div class="stat-sub">from ${CFG.filterDate}</div></div>
+    <div class="stat amber"><div class="stat-lbl">Calls in Range</div><div class="stat-val">${tc}</div><div class="stat-sub">${from||'all'} → ${to||'now'}</div></div>
+    <div class="stat blue"><div class="stat-lbl">Open</div><div class="stat-val">${op}</div><div class="stat-sub">in progress</div></div>
+    <div class="stat green"><div class="stat-lbl">Closed</div><div class="stat-val">${cl}</div><div class="stat-sub">completed</div></div>`;
+
+  const agents = getUsers().filter(u => u.role==='agent');
+
+  // Build per-agent data
+  const agData = agents.map(a => {
+    const sn      = (a.sheetName||'').trim().toUpperCase();
+    const ass     = L.filter(l => l.assignedTo.trim().toUpperCase()===sn);
+    const allLogs = ass.reduce((acc,l) => acc.concat(logsInRange(l.callLogs, from, to)), []);
+    const called  = new Set(allLogs.map(lg => lg.by === a.name).filter(Boolean));
+    // Verified in date range = leads that are Verified AND have a log in range
+    const verInRange  = ass.filter(l => l.status==='Verified' && logsInRange(l.callLogs,from,to).length>0).length;
+    const unverInRange= ass.filter(l => l.status!=='Verified' && logsInRange(l.callLogs,from,to).length>0).length;
+    const callsDone   = ass.filter(l => logsInRange(l.callLogs,from,to).length>0).length;
+    const remaining   = ass.filter(l => l.callStatus==='NOT CALLED').length;
+    const openC       = ass.filter(l => l.callStatus==='OPEN').length;
+    const closedC     = ass.filter(l => l.callStatus==='CLOSE').length;
+    return { a, ass, verInRange, unverInRange, callsDone, remaining, openC, closedC, total: ass.length };
+  });
+
+  // Table
+  document.getElementById('rep-tbl').innerHTML = agData.map(d => `
+    <tr style="cursor:pointer" onclick="openAgentAnalytics('${d.a.id}')">
+      <td><strong>${d.a.name}</strong><br><span class="mono" style="font-size:10px;color:var(--txt2)">${d.a.sheetName||d.a.username}</span></td>
+      <td class="mono" style="color:var(--acc)">${d.total}</td>
+      <td class="mono" style="color:var(--acc2)">${d.a.total || d.ass.filter(l=>l.status==='Verified').length}</td>
+      <td class="mono" style="color:var(--acc3)">${d.ass.filter(l=>l.status!=='Verified').length}</td>
+      <td class="mono" style="color:var(--acc)">${d.callsDone}</td>
+      <td class="mono" style="color:var(--txt2)">${d.remaining}</td>
+      <td><span class="badge b-open">${d.openC}</span></td>
+      <td><span class="badge b-close">${d.closedC}</span></td>
+      <td><button class="act-btn" onclick="openAgentAnalytics('${d.a.id}');event.stopPropagation()">📊 View</button></td>
+    </tr>`).join('');
+
+  // Bar Chart
+  renderRepChart(agData);
+}
+
+function renderRepChart(agData) {
+  const ctx = document.getElementById('rep-chart');
+  if (!ctx) return;
+  if (repChart) { repChart.destroy(); repChart = null; }
+
+  const labels  = agData.map(d => d.a.name.split(' ')[0]);
+  const isDark  = true; // our theme is dark
+  const gridC   = 'rgba(42,48,64,0.6)';
+  const textC   = '#8892a4';
+
+  repChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Total Leads',  data: agData.map(d=>d.total),    backgroundColor: 'rgba(59,130,246,0.7)',  borderRadius: 4 },
+        { label: 'Calls Done',   data: agData.map(d=>d.callsDone),backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 4 },
+        { label: 'Verified',     data: agData.map(d=>d.ass.filter(l=>l.status==='Verified').length), backgroundColor: 'rgba(6,214,160,0.7)', borderRadius: 4 },
+        { label: 'Remaining',    data: agData.map(d=>d.remaining),backgroundColor: 'rgba(239,68,68,0.5)',  borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: textC, font: { size: 12 } } },
+        tooltip: { mode: 'index' }
+      },
+      scales: {
+        x: { ticks: { color: textC }, grid: { color: gridC } },
+        y: { ticks: { color: textC }, grid: { color: gridC }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// Agent click → analytics modal
+function openAgentAnalytics(uid) {
+  const u    = getUsers().find(x=>x.id===uid);
+  if (!u) return;
+  const sn   = (u.sheetName||'').trim().toUpperCase();
+  const ass  = LEADS.filter(l=>l.assignedTo.trim().toUpperCase()===sn);
+  const { from, to } = getRepDateRange();
+  const logsInR = ass.reduce((a,l)=>a.concat(logsInRange(l.callLogs,from,to)),[]);
+  const ver  = ass.filter(l=>l.status==='Verified').length;
+  const uv   = ass.length - ver;
+  const done = ass.filter(l=>l.callStatus!=='NOT CALLED').length;
+  const rem  = ass.filter(l=>l.callStatus==='NOT CALLED').length;
+  const op   = ass.filter(l=>l.callStatus==='OPEN').length;
+  const cl   = ass.filter(l=>l.callStatus==='CLOSE').length;
+
+  document.getElementById('analytics-title').textContent = u.name + ' — Analytics';
+  document.getElementById('analytics-body').innerHTML = `
+    <div class="ag-stats" style="margin-bottom:20px">
+      <div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc)">${ass.length}</div><div class="ag-stat-lbl">Total Leads</div></div>
+      <div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc2)">${ver}</div><div class="ag-stat-lbl">Verified</div></div>
+      <div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc3)">${uv}</div><div class="ag-stat-lbl">Unverified</div></div>
+    </div>
+    <div class="ag-stats" style="margin-bottom:20px">
+      <div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc)">${done}</div><div class="ag-stat-lbl">Calls Done</div></div>
+      <div class="ag-stat"><div class="ag-stat-val" style="color:var(--txt2)">${rem}</div><div class="ag-stat-lbl">Remaining</div></div>
+      <div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc2)">${cl}</div><div class="ag-stat-lbl">Closed</div></div>
+    </div>
+    <div class="tcard">
+      <div class="thead-bar"><div class="thead-title">Recent Leads</div></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Name</th><th>Number</th><th>Doc</th><th>Call</th><th>Location</th></tr></thead>
+        <tbody>${ass.slice(0,20).map(l=>`<tr>
+          <td><strong>${l.name}</strong></td>
+          <td class="mono" style="font-size:11px">${l.number}</td>
+          <td>${bDoc(l.status)}</td>
+          <td>${bCall(l.callStatus)}</td>
+          <td style="font-size:12px">${l.location}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  openModal('m-analytics');
+}
+
+function exportAgentReport() {
+  const { from, to } = getRepDateRange();
+  const agents = getUsers().filter(u=>u.role==='agent');
+  const header = 'Agent,Total Leads,Verified,Unverified,Calls Done,Remaining,Open,Closed\n';
+  const rows = agents.map(a => {
+    const sn  = (a.sheetName||'').trim().toUpperCase();
+    const ass = LEADS.filter(l=>l.assignedTo.trim().toUpperCase()===sn);
+    const ver = ass.filter(l=>l.status==='Verified').length;
+    const done= ass.filter(l=>logsInRange(l.callLogs,from,to).length>0).length;
+    const rem = ass.filter(l=>l.callStatus==='NOT CALLED').length;
+    const op  = ass.filter(l=>l.callStatus==='OPEN').length;
+    const cl  = ass.filter(l=>l.callStatus==='CLOSE').length;
+    return '"'+a.name+'",'+ass.length+','+ver+','+(ass.length-ver)+','+done+','+rem+','+op+','+cl;
+  }).join('\n');
+  const blob = new Blob([header+rows],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'agent_report_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  toast('✅ Agent report exported','ok');
+}
+
+// ═══════════════════════════════════════════════════
+//  COPY TEXT — global selection copy on Ctrl+C works
+//  Extra: copy number button on lead rows
+// ═══════════════════════════════════════════════════
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => toast('📋 Copied: '+text,'ok'));
+}
+
+// ═══════════════════════════════════════════════════
+//  AGENT DASHBOARD — show call counts
+// ═══════════════════════════════════════════════════
+// Override renderDashboard for agents to show richer stats
+const _origRenderDashboard = renderDashboard;
+function renderDashboard() {
+  _origRenderDashboard();
+  // For agents, upgrade stats
+  if (CU && CU.role === 'agent') {
+    const L     = myLeads();
+    const total = L.length;
+    const ver   = L.filter(l=>l.status==='Verified').length;
+    const calls = L.filter(l=>l.callStatus!=='NOT CALLED').length;
+    const rem   = L.filter(l=>l.callStatus==='NOT CALLED').length;
+    const cl    = L.filter(l=>l.callStatus==='CLOSE').length;
+    const op    = L.filter(l=>l.callStatus==='OPEN').length;
+    document.getElementById('dash-stats').innerHTML = `
+      <div class="stat blue"><div class="stat-lbl">Total Assigned</div><div class="stat-val">${total}</div><div class="stat-sub">your leads</div></div>
+      <div class="stat green"><div class="stat-lbl">Verified</div><div class="stat-val">${ver}</div><div class="stat-sub">${total?Math.round(ver/total*100):0}%</div></div>
+      <div class="stat amber"><div class="stat-lbl">Calls Done</div><div class="stat-val">${calls}</div><div class="stat-sub">${rem} remaining</div></div>
+      <div class="stat red"><div class="stat-lbl">Closed</div><div class="stat-val">${cl}</div><div class="stat-sub">${op} open</div></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  LOCK CHECK in saveLog
+// ═══════════════════════════════════════════════════
+const _origSaveLog = saveLog;
+async function saveLog() {
+  if (CU.role === 'agent' && isEntryLocked()) {
+    const lock = getLockSettings();
+    toast('🔒 Entries locked ' + lock.from + ' – ' + lock.to + '. Contact admin.', 'err');
+    return;
+  }
+  _origSaveLog();
+}
 </script>
 </body>
 </html>
