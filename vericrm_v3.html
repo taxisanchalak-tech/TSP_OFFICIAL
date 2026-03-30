@@ -539,16 +539,57 @@ tr.is-verified{cursor:default}
 
       <!-- REPORTS -->
       <div class="view" id="v-reports">
-        <div class="sec-hdr"><div><div class="sec-title">Reports</div><div class="sec-sub">Agent performance analytics</div></div></div>
-        <div class="stats" id="rep-stats"></div>
-        <div class="tcard">
-          <div class="thead-bar"><div class="thead-title">📊 Agent Performance</div></div>
-          <div class="tbl-wrap"><table><thead><tr><th>Agent</th><th>Assigned</th><th>Calls Logged</th><th>Open</th><th>Closed</th><th>Completion</th></tr></thead>
-          <tbody id="rep-tbl"></tbody></table></div>
+        <div class="sec-hdr">
+          <div><div class="sec-title">Reports</div><div class="sec-sub" id="rep-sub">Agent performance · ID Verification</div></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--txt2)">Call Date:</span>
+            <input class="inp" id="rep-from" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderReports()">
+            <span style="font-size:12px;color:var(--txt2)">to</span>
+            <input class="inp" id="rep-to" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderReports()">
+            <button class="btn btn-s btn-sm" onclick="clearRepDates()">Clear</button>
+            <button class="btn btn-s btn-sm" onclick="setRepQuick(7)">7d</button>
+            <button class="btn btn-s btn-sm" onclick="setRepQuick(30)">30d</button>
+            <button class="btn btn-s btn-sm" onclick="exportAgentReport()">📥 Export</button>
+          </div>
         </div>
+
+        <!-- Department tabs -->
+        <div style="display:flex;gap:6px;margin-bottom:18px">
+          <button class="vtab active" id="rep-tab-id" onclick="setRepDept('id_verification')">🔐 ID Verification</button>
+          <button class="vtab" id="rep-tab-re" style="opacity:.45" title="Coming soon — will activate when Recharge dept is added">💳 Recharge (soon)</button>
+        </div>
+
+        <div class="stats" id="rep-stats"></div>
+
+        <!-- Chart -->
+        <div class="tcard" style="margin-bottom:20px">
+          <div class="thead-bar">
+            <div class="thead-title">📊 Performance Chart</div>
+            <div class="controls">
+              <select class="fsel" id="rep-chart-metric" onchange="renderReports()">
+                <option value="all">All Metrics</option>
+                <option value="calls">Calls Only</option>
+                <option value="verified">Verified Only</option>
+              </select>
+            </div>
+          </div>
+          <div style="padding:16px 18px">
+            <canvas id="rep-chart" style="max-height:300px"></canvas>
+          </div>
+        </div>
+
+        <!-- Agent table -->
         <div class="tcard">
-          <div class="thead-bar"><div class="thead-title">📈 Distribution</div></div>
-          <div style="padding:16px 18px" id="dist-bars"></div>
+          <div class="thead-bar">
+            <div class="thead-title">👥 Agent Breakdown</div>
+            <div id="rep-range-lbl" style="font-size:11px;color:var(--acc3);font-family:var(--mono)">ALL TIME</div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Agent</th><th>Total Leads</th><th>Verified</th><th>Unverified</th><th>Calls Done</th><th>Remaining</th><th>Open</th><th>Closed</th><th>Details</th></tr></thead>
+              <tbody id="rep-tbl"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -2255,9 +2296,32 @@ function logsInRange(logs, from, to) {
   });
 }
 
+// quick date shortcuts
+function setRepQuick(days) {
+  var to   = new Date();
+  var from = new Date();
+  from.setDate(from.getDate() - days);
+  var fmt = function(d){ return d.toISOString().split('T')[0]; };
+  var f = document.getElementById('rep-from');
+  var t = document.getElementById('rep-to');
+  if (f) f.value = fmt(from);
+  if (t) t.value = fmt(to);
+  renderReports();
+}
+
+let _repDept = 'id_verification';
+function setRepDept(dept) {
+  _repDept = dept;
+  renderReports();
+}
+
 function renderReports() {
   document.getElementById('v-reports').classList.add('active');
   const { from, to } = getRepDateRange();
+
+  // Update range label
+  var rl = document.getElementById('rep-range-lbl');
+  if (rl) rl.textContent = (from || to) ? ((from||'start') + ' → ' + (to||'today')) : 'ALL TIME';
   const L   = LEADS;
   const tot = L.length;
   const tc  = L.reduce((a,l) => a + logsInRange(l.callLogs, from, to).length, 0);
@@ -2320,12 +2384,19 @@ function renderRepChart(agData) {
     type: 'bar',
     data: {
       labels,
-      datasets: [
-        { label: 'Total Leads',  data: agData.map(d=>d.total),    backgroundColor: 'rgba(59,130,246,0.7)',  borderRadius: 4 },
-        { label: 'Calls Done',   data: agData.map(d=>d.callsDone),backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 4 },
-        { label: 'Verified',     data: agData.map(d=>d.ass.filter(l=>l.status==='Verified').length), backgroundColor: 'rgba(6,214,160,0.7)', borderRadius: 4 },
-        { label: 'Remaining',    data: agData.map(d=>d.remaining),backgroundColor: 'rgba(239,68,68,0.5)',  borderRadius: 4 },
-      ]
+      datasets: (function() {
+        var metric = (document.getElementById('rep-chart-metric')||{}).value || 'all';
+        var sets = [];
+        if (metric==='all'||metric==='calls') {
+          sets.push({ label: 'Total Leads', data: agData.map(function(d){return d.total;}), backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 4 });
+          sets.push({ label: 'Calls Done',  data: agData.map(function(d){return d.callsDone;}), backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 4 });
+          sets.push({ label: 'Remaining',   data: agData.map(function(d){return d.remaining;}), backgroundColor: 'rgba(239,68,68,0.5)', borderRadius: 4 });
+        }
+        if (metric==='all'||metric==='verified') {
+          sets.push({ label: 'Verified', data: agData.map(function(d){return d.ass.filter(function(l){return l.status==='Verified';}).length;}), backgroundColor: 'rgba(6,214,160,0.7)', borderRadius: 4 });
+        }
+        return sets;
+      })()
     },
     options: {
       responsive: true,
