@@ -2454,21 +2454,52 @@ function renderReports() {
   const op  = L.filter(l => l.callStatus==='OPEN').length;
   const cl  = L.filter(l => l.callStatus==='CLOSE').length;
 
-  // Total verified/unverified across all agents
-  const totVer  = L.filter(function(l){ return l.status==='Verified'; }).length;
-  const totUver = tot - totVer;
+  // ── CORRECT DATE RANGE LOGIC ──────────────────────────────
+  // Calls Done  = count from CALL_LOGS where Call_Date in range
+  // Verified    = count from new_user where Status=Verified AND Join_Date in range
+  // Unverified  = count from new_user where Status=Unverified AND Join_Date in range
+  // If no date range set → show all-time counts
 
-  // Calls in range = leads that have at least one log in range
-  function normLogs2(lead) {
-    return (lead.callLogs||[]).map(function(lg){ return {...lg, date:lg.callDate||lg.date||''}; });
+  function normDate(lead) {
+    return (lead.callLogs||[]).map(function(lg){
+      return Object.assign({},lg,{date:lg.callDate||lg.date||''});
+    });
   }
-  const tcInRange = L.filter(function(l){ return logsInRange(normLogs2(l),from,to).length>0; }).length;
+
+  function inDateRange(dateStr) {
+    if (!from && !to) return true;
+    if (from && dateStr < from) return false;
+    if (to   && dateStr > to)   return false;
+    return true;
+  }
+
+  // Calls: count unique leads that have at least one call log in range
+  var callsInRange = L.filter(function(l){
+    return normDate(l).some(function(lg){ return lg.date && inDateRange(lg.date); });
+  }).length;
+
+  // Verified/Unverified: filter by Join Date range from new_user sheet
+  var verInRange  = L.filter(function(l){
+    var jd = (l.joinDate||'').split(' ')[0];
+    return l.status==='Verified' && inDateRange(jd);
+  }).length;
+
+  var uverInRange = L.filter(function(l){
+    var jd = (l.joinDate||'').split(' ')[0];
+    return l.status!=='Verified' && inDateRange(jd);
+  }).length;
+
+  // All-time totals (always show regardless of range)
+  var totVer  = L.filter(function(l){ return l.status==='Verified'; }).length;
+  var totUver = tot - totVer;
+
+  var rangeLabel = (from||to) ? ((from||'start')+' → '+(to||'today')) : 'all time';
 
   document.getElementById('rep-stats').innerHTML =
     '<div class="stat blue"><div class="stat-lbl">Total Leads</div><div class="stat-val">'+tot+'</div><div class="stat-sub">from '+CFG.filterDate+'</div></div>' +
-    '<div class="stat amber"><div class="stat-lbl">Calls in Range</div><div class="stat-val">'+tcInRange+'</div><div class="stat-sub">'+(from||'all')+' → '+(to||'now')+'</div></div>' +
-    '<div class="stat green"><div class="stat-lbl">Verified</div><div class="stat-val">'+totVer+'</div><div class="stat-sub">'+(tot?Math.round(totVer/tot*100):0)+'%</div></div>' +
-    '<div class="stat red"><div class="stat-lbl">Unverified</div><div class="stat-val">'+totUver+'</div><div class="stat-sub">'+(tot?Math.round(totUver/tot*100):0)+'%</div></div>';
+    '<div class="stat amber"><div class="stat-lbl">Calls Done</div><div class="stat-val">'+callsInRange+'</div><div class="stat-sub">'+rangeLabel+'</div></div>' +
+    '<div class="stat green"><div class="stat-lbl">Verified</div><div class="stat-val">'+verInRange+'</div><div class="stat-sub">join date in range</div></div>' +
+    '<div class="stat red"><div class="stat-lbl">Unverified</div><div class="stat-val">'+uverInRange+'</div><div class="stat-sub">join date in range</div></div>';
 
   const agents = getUsers().filter(u => u.role==='agent');
 
@@ -2484,18 +2515,43 @@ function renderReports() {
       });
     }
 
-    // Leads that have at least one call in the date range
+    // Calls done = leads with at least one call log date in range (from CALL_LOGS)
     const callsDone = ass.filter(function(l){
-      return logsInRange(normLogs(l), from, to).length > 0;
+      return normLogs(l).some(function(lg){
+        if (!lg.date) return false;
+        if (from && lg.date < from) return false;
+        if (to   && lg.date > to)   return false;
+        return true;
+      });
     }).length;
 
-    // Total verified / unverified (all time — not range dependent)
-    const verTotal  = ass.filter(function(l){ return l.status==='Verified'; }).length;
-    const uverTotal = ass.length - verTotal;
+    // Verified/Unverified = filter by Join Date in range (from new_user Status column)
+    const verTotal = ass.filter(function(l){
+      if (l.status !== 'Verified') return false;
+      if (!from && !to) return true;
+      var jd = (l.joinDate||'').split(' ')[0];
+      if (from && jd < from) return false;
+      if (to   && jd > to)   return false;
+      return true;
+    }).length;
+
+    const uverTotal = ass.filter(function(l){
+      if (l.status === 'Verified') return false;
+      if (!from && !to) return true;
+      var jd = (l.joinDate||'').split(' ')[0];
+      if (from && jd < from) return false;
+      if (to   && jd > to)   return false;
+      return true;
+    }).length;
 
     // In range: verified leads that got a call in range
     const verInRange = ass.filter(function(l){
-      return l.status==='Verified' && logsInRange(normLogs(l),from,to).length>0;
+      return l.status==='Verified' && normLogs(l).some(function(lg){
+        if (!lg.date) return false;
+        if (from && lg.date < from) return false;
+        if (to   && lg.date > to)   return false;
+        return true;
+      });
     }).length;
 
     const remaining = ass.filter(function(l){ return l.callStatus==='NOT CALLED'; }).length;
