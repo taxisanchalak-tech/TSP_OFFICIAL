@@ -828,14 +828,75 @@ const DEFAULT_USERS = [
   { id:'u5', name:'Recharge Agent', username:'ragent1', password:'1234', role:'agent',   dept:'recharge',        sheetName:'RECHARGE' },
 ];
 
+// In-memory user cache — loaded from sheet on login
+let _usersCache = null;
+
 function getUsers() {
+  if (_usersCache) return _usersCache;
+  // Fallback to localStorage then defaults
   const saved = localStorage.getItem('vericrm_users');
   if (saved) { try { return JSON.parse(saved); } catch(e){} }
   return DEFAULT_USERS;
 }
 
 function saveUsers(users) {
+  _usersCache = users;
   localStorage.setItem('vericrm_users', JSON.stringify(users));
+}
+
+// Load users from CRM_USERS sheet via Apps Script
+async function loadUsersFromSheet() {
+  if (!CFG.scriptUrl) {
+    // No script — use localStorage / defaults
+    _usersCache = getUsers();
+    return;
+  }
+  try {
+    const url  = CFG.scriptUrl + '?action=getUsers&key=' + encodeURIComponent(CFG.secretKey);
+    const res  = await fetch(url);
+    const json = await res.json();
+    if (json.ok && json.users && json.users.length) {
+      _usersCache = json.users;
+      // Also cache locally for offline fallback
+      localStorage.setItem('vericrm_users', JSON.stringify(json.users));
+      console.log('Users loaded from sheet:', json.users.length);
+    } else {
+      // Sheet has no users yet — use defaults and save them
+      _usersCache = getUsers();
+      console.log('No users in sheet, using defaults');
+    }
+  } catch(err) {
+    console.warn('Could not load users from sheet:', err.message);
+    _usersCache = getUsers();
+  }
+}
+
+// Save a user to sheet
+async function saveUserToSheet(user) {
+  if (!CFG.scriptUrl) return;
+  try {
+    await fetch(CFG.scriptUrl, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'saveUser', key: CFG.secretKey, user })
+    });
+  } catch(err) {
+    console.warn('Could not save user to sheet:', err.message);
+  }
+}
+
+// Delete a user from sheet
+async function deleteUserFromSheet(uid) {
+  if (!CFG.scriptUrl) return;
+  try {
+    await fetch(CFG.scriptUrl, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ action: 'deleteUser', key: CFG.secretKey, uid })
+    });
+  } catch(err) {
+    console.warn('Could not delete user from sheet:', err.message);
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1167,8 +1228,14 @@ async function doLogin() {
   const btn   = document.getElementById('li-btn');
 
   btn.disabled    = true;
-  btn.textContent = 'Signing in…';
+  btn.textContent = 'Loading…';
 
+  // Always load fresh users from sheet before auth check
+  await loadUsersFromSheet();
+  // Also refresh login dropdown with latest names
+  populateLoginDropdown();
+
+  btn.textContent = 'Signing in…';
   const users = getUsers();
   const user  = users.find(u => {
     if (u.username !== uname || u.password !== pass) return false;
@@ -1220,6 +1287,11 @@ async function initApp() {
   mb.style.borderColor = CFG.demo
     ? 'rgba(245,158,11,.3)'  : 'rgba(6,214,160,.3)';
   mb.style.color = CFG.demo ? 'var(--acc3)' : 'var(--acc2)';
+
+  // Refresh users from sheet in background (non-blocking)
+  loadUsersFromSheet().then(function() {
+    buildSidebar(); // rebuild sidebar with fresh user count
+  });
 
   const ini = CU.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('sb-avatar').textContent = ini;
@@ -2060,27 +2132,39 @@ function saveUser() {
   if (pass.length < 6)       { toast('⚠️ Password min 6 chars', 'err'); return; }
 
   const users = getUsers();
+  const newUser = { id: eid||('u_'+Date.now()), name, username:uname,
+    password:pass, role, dept, sheetName:sname||name.toUpperCase() };
+
   if (eid) {
     const i = users.findIndex(u=>u.id===eid);
-    if (i>-1) users[i] = { ...users[i], name, username:uname, password:pass, role, dept, sheetName:sname||name.toUpperCase() };
+    if (i>-1) users[i] = newUser;
     toast('✅ User updated', 'ok');
   } else {
-    if (users.some(u=>u.username===uname)) { toast('⚠️ Username taken', 'err'); return; }
-    users.push({ id:'u_'+Date.now(), name, username:uname, password:pass, role, dept, sheetName:sname||name.toUpperCase() });
+    if (users.some(u=>u.username===uname)) { toast('⚠ Username already taken', 'err'); return; }
+    users.push(newUser);
     toast('✅ User added', 'ok');
   }
   saveUsers(users);
+  // Save to sheet in background
+  saveUserToSheet(newUser).then(function(){
+    console.log('User saved to sheet');
+  });
   closeModal('m-user');
   renderUsersTable();
   buildSidebar();
+  populateLoginDropdown();
 }
 
 function delUser(uid) {
   if (!confirm('Delete this user?')) return;
   const users = getUsers().filter(u=>u.id!==uid);
   saveUsers(users);
-  toast('🗑️ User deleted', 'ok');
+  deleteUserFromSheet(uid).then(function(){
+    console.log('User deleted from sheet');
+  });
+  toast('🗑 User deleted', 'ok');
   renderUsersTable();
+  populateLoginDropdown();
 }
 
 // ═══════════════════════════════════════════════════
