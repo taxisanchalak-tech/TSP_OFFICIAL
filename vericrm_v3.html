@@ -275,7 +275,7 @@ tr.is-verified{cursor:default}
   <div class="step-block">
     <div class="step-label">Step 3 — Sheet Tab Name</div>
     <div class="step-desc">The tab at the bottom of your sheet that has the leads (from your screenshot: <code>ALL_USERS</code>)</div>
-    <input class="inp" id="cfg-sheet-tab" type="text" placeholder="ALL_USERS" value="ALL_USERS">
+    <input class="inp" id="cfg-sheet-tab" type="text" placeholder="new_user" value="new_user">
   </div>
 
   <div class="step-block">
@@ -413,6 +413,38 @@ tr.is-verified{cursor:default}
             <thead><tr><th>Name</th><th>Number</th><th>Location</th><th>Doc</th><th>Call</th><th>Assigned To</th><th>Join Date</th></tr></thead>
             <tbody id="dash-tbl"></tbody>
           </table></div>
+        </div>
+      </div>
+
+      <!-- AGENT DASHBOARD -->
+      <div class="view" id="v-agent-dashboard">
+        <div class="sec-hdr">
+          <div><div class="sec-title" id="ag-dash-title">My Dashboard</div>
+          <div class="sec-sub" id="ag-dash-sub">Your personal performance overview</div></div>
+          <button class="btn btn-s btn-sm" onclick="hardRefresh()">🔄 Refresh</button>
+        </div>
+
+        <!-- Stats row -->
+        <div class="stats" id="ag-dash-stats"></div>
+
+        <!-- Call log history table -->
+        <div class="tcard" style="margin-bottom:20px">
+          <div class="thead-bar">
+            <div class="thead-title">📋 My Call History</div>
+            <div class="controls">
+              <input class="inp" id="ag-date-from" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderAgentDashboard()">
+              <span style="font-size:12px;color:var(--txt2)">to</span>
+              <input class="inp" id="ag-date-to" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderAgentDashboard()">
+              <button class="btn btn-s btn-sm" onclick="clearAgentDates()">Clear</button>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Lead Name</th><th>Number</th><th>Location</th><th>Doc Status</th><th>Call Status</th><th>Call Date</th><th>Remarks</th></tr></thead>
+              <tbody id="ag-calls-tbl"></tbody>
+            </table>
+          </div>
+          <div class="pag" id="ag-calls-pag"></div>
         </div>
       </div>
 
@@ -696,20 +728,48 @@ tr.is-verified{cursor:default}
 // ═══════════════════════════════════════════════════
 //  CONFIG  (saved to localStorage after setup)
 // ═══════════════════════════════════════════════════
+// ════════════════════════════════════════════
+//  BAKED CONFIG — Admin fills these once,
+//  then all users share the file without setup
+// ════════════════════════════════════════════
+const BAKED = {
+  sheetId:    '',           // ← paste your Sheet ID here
+  apiKey:     '',           // ← paste your API Key here
+  scriptUrl:  '',           // ← paste your Apps Script URL here
+  secretKey:  'vericrm2026',
+  sheetTab:   'new_user',
+  logsTab:    'CALL_LOGS',
+  filterDate: '2026-03-01',
+  demo:       false
+};
+
 let CFG = {
   sheetId:    '',
   apiKey:     '',
-  scriptUrl:  '',           // Apps Script Web App URL
-  secretKey:  'vericrm2026', // must match CONFIG.SECRET_KEY in Apps Script
-  sheetTab:   'ALL_USERS',
+  scriptUrl:  '',
+  secretKey:  'vericrm2026',
+  sheetTab:   'new_user',
   logsTab:    'CALL_LOGS',
-  filterDate: '2026-02-21',
+  filterDate: '2026-03-01',
   demo:       false
 };
 
 function loadCfg() {
+  // Priority 1: BAKED config in HTML (admin bakes it in)
+  if (BAKED.sheetId || BAKED.scriptUrl) {
+    CFG = { ...CFG, ...BAKED };
+  }
+  // Priority 2: localStorage override (from setup screen)
   const saved = localStorage.getItem('vericrm_cfg');
-  if (saved) { try { CFG = { ...CFG, ...JSON.parse(saved) }; } catch(e){} }
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      // Only override if localStorage has actual values
+      if (parsed.sheetId || parsed.scriptUrl) {
+        CFG = { ...CFG, ...parsed };
+      }
+    } catch(e){}
+  }
 }
 
 function saveCfg() {
@@ -1132,9 +1192,9 @@ async function initApp() {
 
   await loadLeads();
   buildSidebar();
-  // Agents → My Leads, Admin/Manager → All Leads (no dashboard by default)
+  // Agents → Agent Dashboard, Admin/Manager → All Leads
   if (CU.role === 'agent') {
-    navigateTo('my-leads');
+    navigateTo('agent-dashboard');
   } else {
     navigateTo('all-leads');
   }
@@ -1153,11 +1213,12 @@ function buildSidebar() {
   const role = CU.role;
   const isAgent = CU.role === 'agent';
   const items = [
-    { key:'dashboard',  icon:'📊', label:'Dashboard',    roles:['admin','manager'] },
-    { key:'my-leads',   icon:'📞', label:'My Leads',     roles:['agent'], badge: myLeads().length },
-    { key:'all-leads',  icon:'🗂️', label:'All Leads',    roles:['admin','manager'] },
-    { key:'users',      icon:'👥', label:'Manage Users', roles:['admin'] },
-    { key:'reports',    icon:'📈', label:'Reports',      roles:['admin','manager'] },
+    { key:'dashboard',       icon:'📊', label:'Dashboard',    roles:['admin','manager'] },
+    { key:'agent-dashboard', icon:'📊', label:'My Dashboard', roles:['agent'] },
+    { key:'my-leads',        icon:'📞', label:'My Leads',     roles:['agent'], badge: myLeads().length },
+    { key:'all-leads',       icon:'🗂️', label:'All Leads',    roles:['admin','manager'] },
+    { key:'users',           icon:'👥', label:'Manage Users', roles:['admin'] },
+    { key:'reports',         icon:'📈', label:'Reports',      roles:['admin','manager'] },
   ];
   let html = '<div class="nav-sec">Main Menu</div>';
   items.forEach(it => {
@@ -1184,16 +1245,23 @@ function navigateTo(view) {
   if (ni) ni.classList.add('active');
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
 
-  const titles = { dashboard:'Dashboard', 'my-leads':'My Leads',
-    'all-leads':'All Leads', users:'Manage Users', reports:'Reports' };
+  const titles = {
+    'dashboard':       'Dashboard',
+    'agent-dashboard': 'My Dashboard',
+    'my-leads':        'My Leads',
+    'all-leads':       'All Leads',
+    'users':           'Manage Users',
+    'reports':         'Reports'
+  };
   document.getElementById('pg-title').textContent = titles[view] || view;
 
   switch(view) {
-    case 'dashboard': renderDashboard(); break;
-    case 'my-leads':  renderMyLeads();   break;
-    case 'all-leads': renderAllLeads();  break;
-    case 'users':     renderUsers();     break;
-    case 'reports':   renderReports();   break;
+    case 'dashboard':       renderDashboard();      break;
+    case 'agent-dashboard': renderAgentDashboard(); break;
+    case 'my-leads':        renderMyLeads();        break;
+    case 'all-leads':       renderAllLeads();       break;
+    case 'users':           renderUsers();          break;
+    case 'reports':         renderReports();        break;
   }
 }
 
@@ -1368,6 +1436,93 @@ function exportLocationReport() {
 // ═══════════════════════════════════════════════════
 //  MY LEADS
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  AGENT DASHBOARD
+// ═══════════════════════════════════════════════════
+let agDashPage = 1;
+
+function clearAgentDates() {
+  var f = document.getElementById('ag-date-from');
+  var t = document.getElementById('ag-date-to');
+  if (f) f.value = '';
+  if (t) t.value = '';
+  renderAgentDashboard();
+}
+
+function renderAgentDashboard() {
+  var view = document.getElementById('v-agent-dashboard');
+  if (view) view.classList.add('active');
+
+  var from = (document.getElementById('ag-date-from') || {}).value || '';
+  var to   = (document.getElementById('ag-date-to')   || {}).value || '';
+
+  var myL  = myLeads();
+  var total = myL.length;
+  var ver   = myL.filter(function(l){ return l.status === 'Verified'; }).length;
+  var uver  = total - ver;
+
+  // All my call logs filtered by date
+  var allLogs = [];
+  myL.forEach(function(l) {
+    l.callLogs.forEach(function(lg) {
+      if (from && lg.date < from) return;
+      if (to   && lg.date > to)   return;
+      allLogs.push({ lead: l, log: lg });
+    });
+  });
+
+  var callsDone = myL.filter(function(l){
+    return l.callLogs.some(function(lg){
+      if (from && lg.date < from) return false;
+      if (to   && lg.date > to)   return false;
+      return true;
+    });
+  }).length;
+
+  var closed = myL.filter(function(l){ return l.callStatus === 'CLOSE'; }).length;
+  var open   = myL.filter(function(l){ return l.callStatus === 'OPEN'; }).length;
+  var notCalled = myL.filter(function(l){ return l.callStatus === 'NOT CALLED'; }).length;
+
+  var statsEl = document.getElementById('ag-dash-stats');
+  if (statsEl) statsEl.innerHTML =
+    '<div class="stat blue"><div class="stat-lbl">Total Assigned</div><div class="stat-val">' + total + '</div><div class="stat-sub">your leads</div></div>' +
+    '<div class="stat green"><div class="stat-lbl">Verified</div><div class="stat-val">' + ver + '</div><div class="stat-sub">' + (total ? Math.round(ver/total*100) : 0) + '%</div></div>' +
+    '<div class="stat amber"><div class="stat-lbl">Calls Done</div><div class="stat-val">' + callsDone + '</div><div class="stat-sub">' + (from||to ? (from||'start') + ' → ' + (to||'now') : 'all time') + '</div></div>' +
+    '<div class="stat red"><div class="stat-lbl">Remaining</div><div class="stat-val">' + notCalled + '</div><div class="stat-sub">' + open + ' open · ' + closed + ' closed</div></div>';
+
+  // Call history table — sorted newest first
+  allLogs.sort(function(a,b){ return (b.log.date||'').localeCompare(a.log.date||''); });
+  var page    = paginate(allLogs, agDashPage, PS);
+  var tblEl   = document.getElementById('ag-calls-tbl');
+  var pagEl   = document.getElementById('ag-calls-pag');
+
+  if (tblEl) {
+    if (!page.length) {
+      tblEl.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-ico">📵</div>' +
+        (allLogs.length ? 'No calls in selected date range' : 'No calls logged yet') + '</div></td></tr>';
+    } else {
+      var rows = '';
+      page.forEach(function(item) {
+        var l  = item.lead;
+        var lg = item.log;
+        rows += '<tr>' +
+          '<td><strong>' + l.name + '</strong></td>' +
+          '<td class="mono" style="font-size:11px">' + l.number + '</td>' +
+          '<td style="font-size:12px">' + l.location + '</td>' +
+          '<td>' + bDoc(l.status) + '</td>' +
+          '<td>' + bCall(lg.status) + '</td>' +
+          '<td class="mono" style="font-size:11px">' + (lg.date||'—') + '</td>' +
+          '<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">' + (lg.remark||'—') + '</td>' +
+          '</tr>';
+      });
+      tblEl.innerHTML = rows;
+    }
+  }
+  if (pagEl) pagEl.innerHTML = pagHtml(allLogs.length, agDashPage, PS, 'setAgDashPage', 'entries');
+}
+
+function setAgDashPage(p) { agDashPage = p; renderAgentDashboard(); }
+
 // ── AGENT STATE ──────────────────────────────────────────────
 let myLeadTab = 'all';
 
@@ -1987,10 +2142,11 @@ function toast(msg, type='ok') {
 //  BOOT
 // ═══════════════════════════════════════════════════
 loadCfg();
-if (!CFG.sheetId && !CFG.demo) {
-  showSetup();
+// Skip setup if BAKED config or localStorage config present
+if (!CFG.sheetId && !CFG.scriptUrl && !CFG.demo) {
+  showSetup();   // first-time admin setup
 } else {
-  showLogin();
+  showLogin();   // go straight to login for all users
 }
 
 document.getElementById('li-pass').addEventListener('keydown', e => {
@@ -1999,6 +2155,20 @@ document.getElementById('li-pass').addEventListener('keydown', e => {
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
+// ═══════════════════════════════════════════════════
+//  VERSION INFO
+// ═══════════════════════════════════════════════════
+const VERSION_HISTORY = [
+  { ver:'v1.1', date:'2026-03-30', note:'Agent dashboard, baked config, new_user sheet, date-range reports' },
+  { ver:'v1.0', date:'2026-03-30', note:'Initial release — TSP CRM VERI-001 launch' },
+];
+
+function showVersionInfo() {
+  var msg = 'TSP CRM — TAXI SANCHALAK\nTSP TECHNOLOGIES PVT LTD\nVERI-001\n\nVersion History:\n';
+  VERSION_HISTORY.forEach(function(v) { msg += v.ver + ' (' + v.date + '): ' + v.note + '\n'; });
+  alert(msg);
+}
+
 // ═══════════════════════════════════════════════════
 //  LOCK SCHEDULE
 // ═══════════════════════════════════════════════════
@@ -2125,7 +2295,7 @@ function renderReports() {
       <td class="mono" style="color:var(--acc)">${d.total}</td>
       <td class="mono" style="color:var(--acc2)">${d.a.total || d.ass.filter(l=>l.status==='Verified').length}</td>
       <td class="mono" style="color:var(--acc3)">${d.ass.filter(l=>l.status!=='Verified').length}</td>
-      <td class="mono" style="color:var(--acc)">${d.callsDone}</td>
+      <td class="mono" style="color:var(--acc)">${d.callsDone || d.ass.filter(l=>l.callLogs&&l.callLogs.length>0).length}</td>
       <td class="mono" style="color:var(--txt2)">${d.remaining}</td>
       <td><span class="badge b-open">${d.openC}</span></td>
       <td><span class="badge b-close">${d.closedC}</span></td>
