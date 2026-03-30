@@ -569,7 +569,7 @@ function saveCfg() {
 //  LOCAL USERS  (stored in localStorage)
 // ═══════════════════════════════════════════════════
 const DEFAULT_USERS = [
-  { id:'u1', name:'Super Admin',    username:'admin',   password:'admin123', role:'admin',   dept:'both',            sheetName:'ADMIN' },
+  { id:'u1', name:'Super Admin',    username:'admin',   password:'admin123', role:'admin',   dept:'both',            sheetName:'' },
   { id:'u2', name:'Dipesh Manager', username:'dipesh',  password:'mgr123',   role:'manager', dept:'id_verification', sheetName:'DIPESH' },
   { id:'u3', name:'Kanchan Agent',  username:'kanchan', password:'agt123',   role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
   { id:'u4', name:'ID Agent 1',     username:'agent1',  password:'agt123',   role:'agent',   dept:'id_verification', sheetName:'ID VERIFICATION' },
@@ -714,36 +714,45 @@ async function loadLeads() {
 
   showLoader('Fetching leads from Google Sheet…');
   try {
-    // Fetch all rows — col A:H = AgentId, Name, Number, Adhar, Status, JoinDate, Location, AssignTo
+    // Your sheet: A=Agent Id, B=Name, C=Number, D=Adhar_number,
+    //             E=Status, F=Join Date, G=Location, H=Assign_To
     const rows = await fetchSheetRange(CFG.sheetTab, 'A:H');
     if (!rows.length) { LEADS = []; hideLoader(); return; }
 
-    const header = rows[0].map(h => String(h).trim().toLowerCase());
-    // Map columns dynamically by header name
-    const ci = {
-      agentId:    header.findIndex(h => h.includes('agent') || h.includes('id')),
-      name:       header.findIndex(h => h === 'name'),
-      number:     header.findIndex(h => h.includes('number') || h.includes('mobile')),
-      adhar:      header.findIndex(h => h.includes('adhar') || h.includes('aadhar')),
-      status:     header.findIndex(h => h === 'status'),
-      joinDate:   header.findIndex(h => h.includes('join') || h.includes('date')),
-      location:   header.findIndex(h => h.includes('location') || h.includes('city')),
-      assignedTo: header.findIndex(h => h.includes('assign')),
+    // Use first row as header — detect column index by name, fallback to fixed
+    const hdr = rows[0].map(h => String(h).trim().toLowerCase());
+    function ci(keywords, fallback) {
+      const i = hdr.findIndex(h => keywords.some(k => h.replace(/[^a-z]/g,'').includes(k)));
+      return i >= 0 ? i : fallback;
+    }
+    const COL = {
+      agentId:    ci(['agentid','agent'], 0),
+      name:       ci(['name'], 1),
+      number:     ci(['number','mobile','phone'], 2),
+      adhar:      ci(['adhar','aadhar','aadhaar'], 3),
+      status:     ci(['status'], 4),
+      joinDate:   ci(['joindate','joindt','date'], 5),
+      location:   ci(['location','city'], 6),
+      assignedTo: ci(['assignto','assigned'], 7),
     };
 
-    const raw = rows.slice(1).map((row, idx) => ({
-      rowIndex:   idx + 2,
-      agentId:    String(row[ci.agentId]    ?? '').trim(),
-      name:       String(row[ci.name]       ?? '').trim(),
-      number:     String(row[ci.number]     ?? '').trim(),
-      adhar:      String(row[ci.adhar]      ?? '').trim(),
-      status:     String(row[ci.status]     ?? '').trim(),
-      joinDate:   String(row[ci.joinDate]   ?? '').trim(),
-      location:   String(row[ci.location]   ?? '').trim(),
-      assignedTo: String(row[ci.assignedTo] ?? '').trim(),
-      callStatus: 'NOT CALLED',
-      callLogs:   [],
-    })).filter(r => r.agentId && r.name);
+    const raw = rows.slice(1).map((row, idx) => {
+      // pad row so no index goes out of bounds
+      const r = row.concat(Array(10).fill(''));
+      return {
+        rowIndex:   idx + 2,
+        agentId:    String(r[COL.agentId]    || '').trim(),
+        name:       String(r[COL.name]       || '').trim(),
+        number:     String(r[COL.number]     || '').trim(),
+        adhar:      String(r[COL.adhar]      || '').trim(),
+        status:     String(r[COL.status]     || '').trim(),
+        joinDate:   String(r[COL.joinDate]   || '').trim(),
+        location:   String(r[COL.location]   || '').trim(),
+        assignedTo: String(r[COL.assignedTo] || '').trim(),
+        callStatus: 'NOT CALLED',
+        callLogs:   [],
+      };
+    }).filter(r => r.agentId && r.name);
 
     LEADS = filterByDate(raw, CFG.filterDate);
     mergeLocalLogs();
@@ -785,12 +794,15 @@ function autoDistribute() {
   );
   if (!agents.length) return;
 
-  const knownNames = new Set(agents.map(a => a.sheetName.toUpperCase()));
+  const knownNames = new Set(
+    agents.map(a => (a.sheetName||'').trim().toUpperCase()).filter(Boolean)
+  );
 
-  // Find unassigned leads
+  // Unassigned = blank, 'ID VERIFICATION', or any value not matching a real agent
+  const POOL_VALUES = new Set(['', 'ID VERIFICATION', 'ID_VERIFICATION']);
   const unassigned = LEADS.filter(l => {
     const a = l.assignedTo.trim().toUpperCase();
-    return !a || a === 'ID VERIFICATION' || !knownNames.has(a);
+    return POOL_VALUES.has(a) || (!knownNames.has(a) && !a);
   });
 
   if (!unassigned.length) return;
@@ -950,12 +962,19 @@ function navigateTo(view) {
 //  HELPERS
 // ═══════════════════════════════════════════════════
 function myLeads() {
+  // Build set of all names this user could be matched by in Assign_To column
   const names = new Set([
-    CU.name.toUpperCase(),
-    CU.username.toUpperCase(),
-    (CU.sheetName || '').toUpperCase(),
+    CU.name.trim().toUpperCase(),
+    CU.username.trim().toUpperCase(),
+    (CU.sheetName || '').trim().toUpperCase(),
+    // also first word of name (e.g. "Dipesh Manager" -> "DIPESH")
+    CU.name.trim().split(' ')[0].toUpperCase(),
   ].filter(Boolean));
-  return LEADS.filter(l => names.has(l.assignedTo.trim().toUpperCase()));
+
+  return LEADS.filter(l => {
+    const a = l.assignedTo.trim().toUpperCase();
+    return names.has(a);
+  });
 }
 
 function bDoc(s)  { return s==='Verified' ? '<span class="badge b-v">✓ Verified</span>' : '<span class="badge b-u">⚠ Unverified</span>'; }
