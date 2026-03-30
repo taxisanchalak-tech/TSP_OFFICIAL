@@ -832,10 +832,9 @@ const DEFAULT_USERS = [
 let _usersCache = null;
 
 function getUsers() {
-  if (_usersCache) return _usersCache;
-  // Fallback to localStorage then defaults
-  const saved = localStorage.getItem('vericrm_users');
-  if (saved) { try { return JSON.parse(saved); } catch(e){} }
+  // Always return in-memory cache (loaded from sheet)
+  if (_usersCache && _usersCache.length) return _usersCache;
+  // First load — return defaults (sheet load happens async on login)
   return DEFAULT_USERS;
 }
 
@@ -845,29 +844,33 @@ function saveUsers(users) {
 }
 
 // Load users from CRM_USERS sheet via Apps Script
+// SHEET ALWAYS WINS — localStorage is only offline fallback
 async function loadUsersFromSheet() {
   if (!CFG.scriptUrl) {
-    // No script — use localStorage / defaults
-    _usersCache = getUsers();
+    _usersCache = JSON.parse(localStorage.getItem('vericrm_users')||'null') || DEFAULT_USERS;
     return;
   }
   try {
-    const url  = CFG.scriptUrl + '?action=getUsers&key=' + encodeURIComponent(CFG.secretKey);
+    const url  = CFG.scriptUrl + '?action=getUsers&key=' + encodeURIComponent(CFG.secretKey)
+               + '&t=' + Date.now(); // prevent browser cache
     const res  = await fetch(url);
     const json = await res.json();
     if (json.ok && json.users && json.users.length) {
       _usersCache = json.users;
-      // Also cache locally for offline fallback
+      // Update localStorage so offline fallback is also fresh
       localStorage.setItem('vericrm_users', JSON.stringify(json.users));
-      console.log('Users loaded from sheet:', json.users.length);
+      console.log('✓ Users loaded from sheet:', json.users.length);
     } else {
-      // Sheet has no users yet — use defaults and save them
-      _usersCache = getUsers();
-      console.log('No users in sheet, using defaults');
+      // Sheet empty — clear localStorage cache so old users dont show
+      localStorage.removeItem('vericrm_users');
+      _usersCache = DEFAULT_USERS;
+      console.log('Sheet has no users, using defaults');
     }
   } catch(err) {
-    console.warn('Could not load users from sheet:', err.message);
-    _usersCache = getUsers();
+    console.warn('Sheet unreachable, using cached users:', err.message);
+    // Use localStorage only as offline fallback — NOT as primary source
+    const cached = localStorage.getItem('vericrm_users');
+    _usersCache = cached ? JSON.parse(cached) : DEFAULT_USERS;
   }
 }
 
@@ -2267,6 +2270,9 @@ function toast(msg, type='ok') {
 //  BOOT
 // ═══════════════════════════════════════════════════
 loadCfg();
+// Clear stale user cache on every boot — sheet is source of truth
+localStorage.removeItem('vericrm_users');
+_usersCache = null;
 // Skip setup if BAKED config or localStorage config present
 if (!CFG.sheetId && !CFG.scriptUrl && !CFG.demo) {
   showSetup();   // first-time admin setup
