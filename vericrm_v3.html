@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VeriCRM — ID Verification</title>
+<title>TSP CRM — TAXI SANCHALAK | ID Verification</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -233,8 +233,8 @@ tr.is-verified{cursor:default}
 <!-- ══════════════════ SETUP SCREEN ══════════════════ -->
 <div id="setup-screen">
 <div class="setup-card">
-  <div class="setup-title">🔐 VeriCRM Setup</div>
-  <div class="setup-sub">// one-time configuration — takes 3 minutes //</div>
+  <div class="setup-title">🔐 TSP CRM Setup</div>
+  <div class="setup-sub">// TAXI SANCHALAK · TSP TECHNOLOGIES PVT LTD · VERI-001 //</div>
 
   <div class="hint-box">
     This CRM reads your Google Sheet directly using the Sheets API.<br>
@@ -252,14 +252,24 @@ tr.is-verified{cursor:default}
   </div>
 
   <div class="step-block">
-    <div class="step-label">Step 2 — Google API Key</div>
+    <div class="step-label">Step 2 — Apps Script Web App URL <span style="color:var(--acc2);font-size:10px">(for saving entries)</span></div>
     <div class="step-desc">
-      1. Go to <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a><br>
-      2. Create project → Enable "Google Sheets API"<br>
-      3. Credentials → Create API Key → Copy it<br>
-      4. Also set your sheet sharing to "Anyone with the link can <strong>view</strong>"
+      1. Open your Google Sheet → <strong>Extensions → Apps Script</strong><br>
+      2. Paste the <code>VeriCRM_AppScript.gs</code> code → Save (💾)<br>
+      3. Click <strong>Deploy → New Deployment → Web App</strong><br>
+      4. Execute as: <strong>Me</strong> · Who has access: <strong>Anyone</strong><br>
+      5. Click Deploy → Copy the Web App URL
     </div>
-    <input class="inp" id="cfg-api-key" type="text" placeholder="AIzaSy...">
+    <input class="inp" id="cfg-script-url" type="text" placeholder="https://script.google.com/macros/s/AKfy.../exec">
+  </div>
+
+  <div class="step-block">
+    <div class="step-label">Step 2b — Google API Key <span style="color:var(--txt2);font-size:10px">(for reading sheet directly — optional if using Apps Script)</span></div>
+    <div class="step-desc">
+      Only needed as fallback. Leave blank if Apps Script URL is set above.<br>
+      Set sheet to "Anyone with link can <strong>view</strong>" if using API key.
+    </div>
+    <input class="inp" id="cfg-api-key" type="text" placeholder="AIzaSy... (optional if Apps Script URL set above)">
   </div>
 
   <div class="step-block">
@@ -287,10 +297,10 @@ tr.is-verified{cursor:default}
 <div id="login-page">
 <div class="login-card">
   <div class="brand">
-    <div class="brand-icon">🔐</div>
-    <div class="brand-name">Veri<span>CRM</span></div>
+    <div class="brand-icon" style="font-size:16px">🚖</div>
+    <div class="brand-name">TSP<span>CRM</span></div>
   </div>
-  <div class="brand-sub">// ID VERIFICATION DEPARTMENT //</div>
+  <div class="brand-sub">// TAXI SANCHALAK — TSP TECHNOLOGIES PVT LTD //</div>
 
   <div class="err-box" id="login-err">Invalid PIN. Please try again.</div>
 
@@ -321,15 +331,23 @@ tr.is-verified{cursor:default}
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <div class="sb-brand">
-      <div class="sb-brand-icon">🔐</div>
-      <div class="sb-brand-name">Veri<span>CRM</span></div>
+    <div class="sb-brand" style="flex-direction:column;align-items:flex-start;padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div class="sb-brand-icon" style="font-size:14px">🚖</div>
+        <div class="sb-brand-name">TSP<span>CRM</span></div>
+      </div>
+      <div style="font-size:9px;color:var(--txt2);font-family:var(--mono);letter-spacing:0.5px;line-height:1.4;padding-left:2px">TAXI SANCHALAK<br>TSP TECHNOLOGIES PVT LTD</div>
     </div>
     <div class="sb-dept" id="sb-dept">ID VERIFICATION</div>
     <nav class="sb-nav" id="sb-nav"></nav>
     <div class="filter-pill">
       <div class="fp-lbl">Leads from date</div>
       <div class="fp-val" id="fp-val">—</div>
+    </div>
+    <div style="padding:6px 18px;border-top:1px solid var(--bdr)">
+      <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);text-align:center;line-height:1.6">
+        © TSP TECHNOLOGIES PVT LTD<br>TAXI SANCHALAK · OFFICIAL CRM
+      </div>
     </div>
     <div class="sb-user">
       <div class="avatar" id="sb-avatar">A</div>
@@ -349,7 +367,7 @@ tr.is-verified{cursor:default}
         <button class="btn btn-s btn-sm" onclick="hardRefresh()" style="font-size:11px;padding:5px 12px" title="Refresh data from sheet">🔄 Refresh</button>
         <span class="mode-badge live-badge" id="mode-badge">● LIVE</span>
         <span class="date-badge" id="tb-date"></span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--txt3);padding:4px 8px">v5.0</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--txt3);padding:4px 8px">v1.0</span>
       </div>
     </div>
     <div class="content">
@@ -401,8 +419,13 @@ tr.is-verified{cursor:default}
       <!-- MY LEADS -->
       <div class="view" id="v-my-leads">
         <div class="sec-hdr">
-          <div><div class="sec-title">My Leads</div><div class="sec-sub" id="my-sub">Your assigned leads</div></div>
+          <div><div class="sec-title">My Leads</div><div class="sec-sub" id="my-sub">Your assigned leads · sorted by newest</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="srch" id="num-srch-agent" placeholder="🔍 Search by number…" style="width:200px" onkeydown="if(event.key==='Enter')searchAgentByNumber()">
+            <button class="btn btn-s btn-sm" onclick="searchAgentByNumber()">Search</button>
+          </div>
         </div>
+        <div id="agent-num-result" style="margin-bottom:12px;display:none"></div>
 
         <!-- Agent 3-stat dashboard -->
         <div class="ag-stats" id="ag-stats"></div>
@@ -674,12 +697,14 @@ tr.is-verified{cursor:default}
 //  CONFIG  (saved to localStorage after setup)
 // ═══════════════════════════════════════════════════
 let CFG = {
-  sheetId:   '',
-  apiKey:    '',
-  sheetTab:  'ALL_USERS',
-  logsTab:   'CALL_LOGS',
-  filterDate:'2026-02-21',
-  demo:      false
+  sheetId:    '',
+  apiKey:     '',
+  scriptUrl:  '',           // Apps Script Web App URL
+  secretKey:  'vericrm2026', // must match CONFIG.SECRET_KEY in Apps Script
+  sheetTab:   'ALL_USERS',
+  logsTab:    'CALL_LOGS',
+  filterDate: '2026-02-21',
+  demo:       false
 };
 
 function loadCfg() {
@@ -757,15 +782,17 @@ const PS      = 12;     // page size
 //  SETUP SCREEN
 // ═══════════════════════════════════════════════════
 function saveConfig() {
-  const id  = document.getElementById('cfg-sheet-id').value.trim();
-  const key = document.getElementById('cfg-api-key').value.trim();
-  const tab = document.getElementById('cfg-sheet-tab').value.trim() || 'ALL_USERS';
-  const log = document.getElementById('cfg-logs-tab').value.trim() || 'CALL_LOGS';
+  const id     = document.getElementById('cfg-sheet-id').value.trim();
+  const script = document.getElementById('cfg-script-url').value.trim();
+  const key    = document.getElementById('cfg-api-key').value.trim();
+  const tab    = document.getElementById('cfg-sheet-tab').value.trim() || 'ALL_USERS';
+  const log    = document.getElementById('cfg-logs-tab').value.trim() || 'CALL_LOGS';
 
-  if (!id)  { toast('⚠️ Please enter your Sheet ID', 'err'); return; }
-  if (!key) { toast('⚠️ Please enter your API Key', 'err'); return; }
+  if (!id) { toast('⚠ Please enter your Sheet ID', 'err'); return; }
+  if (!script && !key) { toast('⚠ Please enter Apps Script URL or API Key', 'err'); return; }
 
-  CFG = { ...CFG, sheetId: id, apiKey: key, sheetTab: tab, logsTab: log, demo: false };
+  CFG = { ...CFG, sheetId: id, scriptUrl: script, apiKey: key,
+          sheetTab: tab, logsTab: log, demo: false };
   saveCfg();
   showLogin();
 }
@@ -805,9 +832,10 @@ function populateLoginDropdown() {
 
   // Show dept selector only for admin/manager
   sel.onchange = function() {
-    const u = users.find(x => x.username === this.value);
-    const dw = document.getElementById('dept-wrap');
-    if (u && (u.role === 'admin' || u.role === 'manager' || u.dept === 'both')) {
+    const u   = users.find(x => x.username === this.value);
+    const dw  = document.getElementById('dept-wrap');
+    // Only show dept selector if user has 'both' dept (not admin/manager who auto-get both)
+    if (u && u.dept === 'both' && u.role !== 'admin' && u.role !== 'manager') {
       dw.style.display = 'block';
     } else {
       dw.style.display = 'none';
@@ -864,6 +892,38 @@ async function loadLeads() {
   }
 
   showLoader('Fetching leads from Google Sheet…');
+
+  // ── If Apps Script URL is configured, use it (reads + merges entries) ──
+  if (CFG.scriptUrl) {
+    try {
+      const url = CFG.scriptUrl + '?action=getLeads&key=' + encodeURIComponent(CFG.secretKey)
+                + '&fromDate=' + encodeURIComponent(CFG.filterDate);
+      const res  = await fetch(url);
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || 'Script error');
+
+      LEADS = json.leads.map(l => ({
+        ...l,
+        id: 'lead_' + l.agentId,
+        callLogs: (l.callLogs || []).map(lg => ({
+          status: lg.callStatus || lg.status || '',
+          remark: lg.remarks    || lg.remark || '',
+          date:   lg.callDate   || lg.date   || '',
+          by:     lg.calledBy   || lg.by     || '',
+        }))
+      }));
+
+      autoDistribute();
+      hideLoader();
+      toast('✅ ' + LEADS.length + ' leads loaded', 'ok');
+      return;
+    } catch(err) {
+      hideLoader();
+      toast('⚠ Script error: ' + err.message + ' — trying API key…', 'err');
+      // Fall through to API key method
+    }
+  }
+
   try {
     // Your sheet: A=Agent Id, B=Name, C=Number, D=Adhar_number,
     //             E=Status, F=Join Date, G=Location, H=Assign_To
@@ -994,19 +1054,28 @@ function mergeLocalLogs() {
 async function doLogin() {
   const uname = document.getElementById('li-user').value.trim();
   const pass  = document.getElementById('li-pass').value.trim();
-  const dept  = document.getElementById('li-dept').value;
-  if (!uname) { document.getElementById('login-err').style.display='block'; btn.disabled=false; btn.textContent='Sign In →'; return; }
+  if (!uname) {
+    document.getElementById('login-err').style.display='block';
+    btn.disabled=false; btn.textContent='Sign In →'; return;
+  }
+  // Dept: use visible dept selector if shown, else auto-assign based on role
+  const deptEl = document.getElementById('li-dept');
+  const deptVisible = deptEl && deptEl.closest('#dept-wrap') &&
+    document.getElementById('dept-wrap').style.display !== 'none';
+  const dept = deptVisible ? deptEl.value : 'id_verification';
   const btn   = document.getElementById('li-btn');
 
   btn.disabled    = true;
   btn.textContent = 'Signing in…';
 
   const users = getUsers();
-  const user  = users.find(u =>
-    u.username === uname &&
-    u.password === pass  &&
-    (u.dept === dept || u.dept === 'both')
-  );
+  const user  = users.find(u => {
+    if (u.username !== uname || u.password !== pass) return false;
+    // Admin/manager with dept='both' can always login
+    if (u.dept === 'both') return true;
+    if (u.role === 'admin' || u.role === 'manager') return true;
+    return u.dept === dept || u.dept === 'both';
+  });
 
   if (!user) {
     document.getElementById('login-err').style.display = 'block';
@@ -1029,7 +1098,7 @@ function doLogout() {
 }
 
 function openReconfigure() {
-  if (!confirm('Go to Setup screen to change Sheet ID or API Key?')) return;
+  if (!confirm('Go to Setup screen to change Sheet ID, API Key or Apps Script URL?')) return;
   localStorage.removeItem('vericrm_cfg');
   location.reload();
 }
@@ -1044,7 +1113,7 @@ async function initApp() {
     { weekday:'short', year:'numeric', month:'short', day:'numeric' });
 
   const mb = document.getElementById('mode-badge');
-  mb.textContent = CFG.demo ? '◎ DEMO' : '● LIVE';
+  mb.textContent = CFG.demo ? '◎ DEMO MODE' : '● LIVE';
   mb.style.background = CFG.demo
     ? 'rgba(245,158,11,.12)' : 'rgba(6,214,160,.12)';
   mb.style.borderColor = CFG.demo
@@ -1056,11 +1125,19 @@ async function initApp() {
   document.getElementById('sb-uname').textContent  = CU.name;
   document.getElementById('sb-role').textContent   = CU.role.toUpperCase();
   document.getElementById('fp-val').textContent    = CFG.filterDate;
+  // Set dept label
+  const deptLabels = { id_verification:'ID VERIFICATION', recharge:'RECHARGE DEPT', both:'ALL DEPARTMENTS' };
+  const deptEl = document.getElementById('sb-dept');
+  if (deptEl) deptEl.textContent = deptLabels[CU.dept] || deptLabels[CU.activeDept] || 'ID VERIFICATION';
 
   await loadLeads();
   buildSidebar();
-  // Agents land on My Leads directly; admin/manager on Dashboard
-  navigateTo(CU.role === 'agent' ? 'my-leads' : 'dashboard');
+  // Agents → My Leads, Admin/Manager → All Leads (no dashboard by default)
+  if (CU.role === 'agent') {
+    navigateTo('my-leads');
+  } else {
+    navigateTo('all-leads');
+  }
 }
 
 async function hardRefresh() {
@@ -1074,8 +1151,9 @@ async function hardRefresh() {
 // ═══════════════════════════════════════════════════
 function buildSidebar() {
   const role = CU.role;
+  const isAgent = CU.role === 'agent';
   const items = [
-    { key:'dashboard',  icon:'📊', label:'Dashboard',    roles:['admin','manager','agent'] },
+    { key:'dashboard',  icon:'📊', label:'Dashboard',    roles:['admin','manager'] },
     { key:'my-leads',   icon:'📞', label:'My Leads',     roles:['agent'], badge: myLeads().length },
     { key:'all-leads',  icon:'🗂️', label:'All Leads',    roles:['admin','manager'] },
     { key:'users',      icon:'👥', label:'Manage Users', roles:['admin'] },
@@ -1159,6 +1237,9 @@ function renderDashboard() {
   document.getElementById('v-dashboard').classList.add('active');
   const isAgent = CU.role === 'agent';
   const L = isAgent ? myLeads() : LEADS;
+  if (!L.length && LEADS.length) {
+    // leads loaded but agent has none — show empty state
+  }
   const tot = L.length;
   const ver = L.filter(l=>l.status==='Verified').length;
   const called = L.filter(l=>l.callStatus!=='NOT CALLED').length;
@@ -1333,6 +1414,34 @@ function renderAgentStats() {
 
 function setMyPage(p) { myPage=p; renderMyTable(); }
 
+function searchAgentByNumber() {
+  var q   = document.getElementById('num-srch-agent').value.trim();
+  var res = document.getElementById('agent-num-result');
+  if (!q) { res.style.display='none'; return; }
+  var found = myLeads().filter(function(l){ return l.number.indexOf(q) > -1; });
+  res.style.display = 'block';
+  if (!found.length) {
+    res.innerHTML = '<div style="padding:10px 14px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;font-size:13px;color:var(--txt2)">No lead found with number containing ' + q + '</div>';
+    return;
+  }
+  var html = '';
+  found.forEach(function(l) {
+    var isVerified = l.status === 'Verified';
+    var action = isVerified
+      ? '<span style="color:var(--acc2);font-size:12px">Verified</span>'
+      : '<button class="act-btn" onclick="openLog(&#39;' + l.agentId + '&#39;)">Entry</button>';
+    html += '<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;margin-bottom:6px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">'
+      + '<span style="font-weight:600;min-width:140px">' + l.name + '</span>'
+      + '<span class="mono" style="font-size:12px;color:var(--txt2)">' + l.number + '</span>'
+      + '<span style="font-size:12px">' + l.location + '</span>'
+      + bDoc(l.status)
+      + bCall(l.callStatus)
+      + '<span style="margin-left:auto">' + action + '</span>'
+      + '</div>';
+  });
+  res.innerHTML = html;
+}
+
 function renderMyTable() {
   // null-safe element reads
   const srchEl = document.getElementById('my-srch');
@@ -1343,7 +1452,10 @@ function renderMyTable() {
 
   const q   = srchEl ? srchEl.value.toLowerCase() : '';
   const flt = fltEl  ? fltEl.value : '';
-  let leads = myLeads();
+  // Sort by join date — newest first
+  let leads = myLeads().slice().sort(function(a,b){
+    return (b.joinDate || '').localeCompare(a.joinDate || '');
+  });
 
   if (myLeadTab === 'verified') leads = leads.filter(function(l){ return l.status==='Verified'; });
   if (q)   leads = leads.filter(function(l){ return l.name.toLowerCase().indexOf(q)>-1 || l.number.indexOf(q)>-1; });
@@ -1538,7 +1650,13 @@ function openLog(aid) {
   openModal('m-log');
 }
 
-function saveLog() {
+async function saveLog() {
+  // Check lock schedule
+  if (CU.role === 'agent' && isEntryLocked()) {
+    const lock = getLockSettings();
+    toast('🔒 Entries locked ' + lock.from + ' to ' + lock.to + '. Contact admin.', 'err');
+    return;
+  }
   const status  = document.getElementById('log-status').value;
   const remark  = document.getElementById('log-remark').value.trim();
   const date    = document.getElementById('log-date').value;
@@ -1559,28 +1677,51 @@ function saveLog() {
   const btn = document.getElementById('log-save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
 
-  // Save to Entries sheet tab (localStorage)
-  const entryRow = [
-    lead.agentId,      // Agent ID
-    lead.name,         // Lead Name
-    lead.number,       // Number
-    lead.location,     // Location
-    lead.status,       // Doc Status
-    status,            // Call Status
-    remark,            // Remarks
-    date,              // Call Date
-    CU.name,           // Called By
-    new Date().toISOString()  // Saved At
-  ];
-  appendToSheet('Entries', entryRow);
+  const entryPayload = {
+    action:     'saveEntry',
+    key:        CFG.secretKey,
+    agentId:    lead.agentId,
+    leadName:   lead.name,
+    number:     lead.number,
+    location:   lead.location,
+    docStatus:  lead.status,
+    callStatus: status,
+    remarks:    remark,
+    callDate:   date,
+    calledBy:   CU.name,
+  };
 
-  // Update in-memory
+  // ── Save to Apps Script (sheet) if configured ──
+  if (CFG.scriptUrl) {
+    try {
+      const res  = await fetch(CFG.scriptUrl, {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body:    JSON.stringify(entryPayload),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || 'Save failed');
+      toast('✅ Entry saved to sheet!', 'ok');
+    } catch(err) {
+      // Fallback to localStorage
+      appendToSheet('Entries', Object.values(entryPayload).slice(2));
+      toast('⚠ Sheet save failed — saved locally. Export CSV to sync.', 'err');
+    }
+  } else {
+    // No script URL — save to localStorage only
+    appendToSheet('Entries', [
+      lead.agentId, lead.name, lead.number, lead.location,
+      lead.status, status, remark, date, CU.name, new Date().toISOString()
+    ]);
+    toast('✅ Entry saved locally (set Apps Script URL to save to sheet)', 'ok');
+  }
+
+  // Update in-memory always
   lead.callLogs.push({ status, remark, date, by: CU.name });
   lead.callStatus = status;
 
   btn.disabled = false; btn.textContent = '💾 Save Entry';
   closeModal('m-log');
-  toast('✅ Entry saved to Entries sheet!', 'ok');
   renderAgentStats();
   renderMyTable();
   if (window._curView === 'all-leads') renderAllTable();
@@ -2103,42 +2244,9 @@ function copyText(text) {
   navigator.clipboard.writeText(text).then(() => toast('📋 Copied: '+text,'ok'));
 }
 
-// ═══════════════════════════════════════════════════
-//  AGENT DASHBOARD — show call counts
-// ═══════════════════════════════════════════════════
-// Override renderDashboard for agents to show richer stats
-const _origRenderDashboard = renderDashboard;
-function renderDashboard() {
-  _origRenderDashboard();
-  // For agents, upgrade stats
-  if (CU && CU.role === 'agent') {
-    const L     = myLeads();
-    const total = L.length;
-    const ver   = L.filter(l=>l.status==='Verified').length;
-    const calls = L.filter(l=>l.callStatus!=='NOT CALLED').length;
-    const rem   = L.filter(l=>l.callStatus==='NOT CALLED').length;
-    const cl    = L.filter(l=>l.callStatus==='CLOSE').length;
-    const op    = L.filter(l=>l.callStatus==='OPEN').length;
-    document.getElementById('dash-stats').innerHTML = `
-      <div class="stat blue"><div class="stat-lbl">Total Assigned</div><div class="stat-val">${total}</div><div class="stat-sub">your leads</div></div>
-      <div class="stat green"><div class="stat-lbl">Verified</div><div class="stat-val">${ver}</div><div class="stat-sub">${total?Math.round(ver/total*100):0}%</div></div>
-      <div class="stat amber"><div class="stat-lbl">Calls Done</div><div class="stat-val">${calls}</div><div class="stat-sub">${rem} remaining</div></div>
-      <div class="stat red"><div class="stat-lbl">Closed</div><div class="stat-val">${cl}</div><div class="stat-sub">${op} open</div></div>`;
-  }
-}
+// Agent stats handled in renderDashboard directly
 
-// ═══════════════════════════════════════════════════
-//  LOCK CHECK in saveLog
-// ═══════════════════════════════════════════════════
-const _origSaveLog = saveLog;
-async function saveLog() {
-  if (CU.role === 'agent' && isEntryLocked()) {
-    const lock = getLockSettings();
-    toast('🔒 Entries locked ' + lock.from + ' – ' + lock.to + '. Contact admin.', 'err');
-    return;
-  }
-  _origSaveLog();
-}
+// Lock check is now inline in the main saveLog function
 </script>
 </body>
 </html>
