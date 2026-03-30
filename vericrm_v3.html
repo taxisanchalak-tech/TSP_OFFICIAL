@@ -356,14 +356,44 @@ tr.is-verified{cursor:default}
       <!-- DASHBOARD -->
       <div class="view active" id="v-dashboard">
         <div class="sec-hdr">
-          <div><div class="sec-title">Dashboard</div><div class="sec-sub">ID Verification overview</div></div>
+          <div><div class="sec-title">Dashboard</div><div class="sec-sub" id="dash-sub">Overview</div></div>
           <button class="btn btn-s btn-sm" onclick="hardRefresh()">🔄 Refresh Sheet</button>
         </div>
+        <div class="tcard" style="margin-bottom:20px">
+          <div class="thead-bar">
+            <div class="thead-title">🔍 Search by Number</div>
+            <div class="controls">
+              <input class="srch" id="num-srch" placeholder="Enter mobile number…" style="width:220px" onkeydown="if(event.key==='Enter')searchByNumber()">
+              <button class="btn btn-s btn-sm" onclick="searchByNumber()">Search</button>
+            </div>
+          </div>
+          <div id="num-result" style="padding:0 18px 14px;display:none"></div>
+        </div>
         <div class="stats" id="dash-stats"></div>
+        <div id="loc-report-wrap" style="display:none;margin-bottom:20px">
+          <div class="tcard">
+            <div class="thead-bar">
+              <div class="thead-title">📍 Location Report</div>
+              <div class="controls">
+                <select class="fsel" id="loc-group" onchange="renderLocReport()">
+                  <option value="location">By City</option>
+                  <option value="state">By State</option>
+                </select>
+                <button class="btn btn-s btn-sm" onclick="exportLocationReport()">📥 Export CSV</button>
+              </div>
+            </div>
+            <div class="tbl-wrap"><table>
+              <thead><tr><th>Location</th><th>Total</th><th>Verified</th><th>Unverified</th><th>Called</th><th>Not Called</th><th>Closed</th></tr></thead>
+              <tbody id="loc-tbl"></tbody>
+            </table></div>
+          </div>
+        </div>
         <div class="tcard">
           <div class="thead-bar"><div class="thead-title">📋 Recent Leads</div></div>
-          <div class="tbl-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Location</th><th>Doc</th><th>Call</th><th>Assigned To</th><th>Join Date</th></tr></thead>
-          <tbody id="dash-tbl"></tbody></table></div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>Name</th><th>Number</th><th>Location</th><th>Doc</th><th>Call</th><th>Assigned To</th><th>Join Date</th></tr></thead>
+            <tbody id="dash-tbl"></tbody>
+          </table></div>
         </div>
       </div>
 
@@ -373,30 +403,15 @@ tr.is-verified{cursor:default}
           <div><div class="sec-title">My Leads</div><div class="sec-sub" id="my-sub">Your assigned leads</div></div>
         </div>
 
-        <!-- Agent dashboard stats -->
+        <!-- Agent 3-stat dashboard -->
         <div class="ag-stats" id="ag-stats"></div>
 
-        <!-- Date range filter -->
-        <div class="dr-wrap">
-          <span class="dr-lbl">Filter by Call Date:</span>
-          <input class="inp" id="dr-from" type="date" style="width:140px;padding:6px 10px;font-size:12px">
-          <span class="dr-lbl">to</span>
-          <input class="inp" id="dr-to" type="date" style="width:140px;padding:6px 10px;font-size:12px">
-          <button class="btn btn-s btn-sm" onclick="applyDateRange()">Apply</button>
-          <button class="btn btn-s btn-sm" onclick="clearDateRange()">Clear</button>
-        </div>
-
-        <!-- Tab bar: All / Verified -->
-        <div class="vtab-bar">
-          <button class="vtab active" id="vtab-all" onclick="switchLeadTab('all')">All Leads</button>
-          <button class="vtab" id="vtab-verified" onclick="switchLeadTab('verified')">✓ Verified</button>
-        </div>
-
-        <div class="tcard">
-          <div class="thead-bar">
+        <!-- Search + filter bar -->
+        <div class="tcard" style="margin-bottom:0;border-bottom:none;border-radius:var(--r) var(--r) 0 0">
+          <div class="thead-bar" style="flex-wrap:wrap;gap:8px">
             <div class="thead-title" id="my-tbl-title">📞 My Leads</div>
             <div class="controls">
-              <input class="srch" id="my-srch" placeholder="Search name / location…">
+              <input class="srch" id="my-srch" placeholder="Search name / number…">
               <select class="fsel" id="my-flt">
                 <option value="">All Call Status</option>
                 <option value="OPEN">OPEN</option>
@@ -405,11 +420,35 @@ tr.is-verified{cursor:default}
               </select>
             </div>
           </div>
-          <div class="tbl-wrap"><table><thead><tr>
-            <th>ID</th><th>Name / Number</th><th>Location</th>
-            <th>Adhar</th><th>Doc</th><th>Call Status</th><th>Last Called</th><th>Action</th>
-          </tr></thead>
-          <tbody id="my-tbl"></tbody></table></div>
+        </div>
+
+        <!-- Tab bar -->
+        <div style="background:var(--surf);border-left:1px solid var(--bdr);border-right:1px solid var(--bdr);padding:0 18px">
+          <div class="vtab-bar" style="margin-bottom:0">
+            <button class="vtab active" id="vtab-all" onclick="switchLeadTab('all')">All Leads</button>
+            <button class="vtab" id="vtab-verified" onclick="switchLeadTab('verified')">✓ Verified</button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="tcard" style="border-radius:0 0 var(--r) var(--r);border-top:none">
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Number</th>
+                  <th>Adhar</th>
+                  <th>Doc Status</th>
+                  <th>Join Date</th>
+                  <th>Location</th>
+                  <th>Call Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="my-tbl"></tbody>
+            </table>
+          </div>
           <div class="pag" id="my-pag"></div>
         </div>
       </div>
@@ -1080,53 +1119,144 @@ function pagHtml(total, page, size, setFn, labelTxt) {
 // ═══════════════════════════════════════════════════
 function renderDashboard() {
   document.getElementById('v-dashboard').classList.add('active');
-  const L = LEADS, tot = L.length;
-  const ver   = L.filter(l=>l.status==='Verified').length;
-  const called= L.filter(l=>l.callStatus!=='NOT CALLED').length;
-  const closed= L.filter(l=>l.callStatus==='CLOSE').length;
+  const isAgent = CU.role === 'agent';
+  const L = isAgent ? myLeads() : LEADS;
+  const tot = L.length;
+  const ver = L.filter(l=>l.status==='Verified').length;
+  const called = L.filter(l=>l.callStatus!=='NOT CALLED').length;
+  const closed = L.filter(l=>l.callStatus==='CLOSE').length;
+
+  document.getElementById('dash-sub').textContent =
+    isAgent ? 'Your assigned leads overview' : 'ID Verification overview · filter from ' + CFG.filterDate;
+
   document.getElementById('dash-stats').innerHTML = `
-    <div class="stat blue"><div class="stat-lbl">Total Leads</div><div class="stat-val">${tot}</div><div class="stat-sub">From ${CFG.filterDate}</div></div>
+    <div class="stat blue"><div class="stat-lbl">Total Leads</div><div class="stat-val">${tot}</div><div class="stat-sub">${isAgent?'assigned to you':'from '+CFG.filterDate}</div></div>
     <div class="stat green"><div class="stat-lbl">Verified Docs</div><div class="stat-val">${ver}</div><div class="stat-sub">${tot?Math.round(ver/tot*100):0}%</div></div>
     <div class="stat amber"><div class="stat-lbl">Calls Made</div><div class="stat-val">${called}</div><div class="stat-sub">of ${tot}</div></div>
     <div class="stat red"><div class="stat-lbl">Closed</div><div class="stat-val">${closed}</div><div class="stat-sub">completed</div></div>`;
-  const rows = L.slice(0,10);
+
+  // Location report — admin/manager only
+  const locWrap = document.getElementById('loc-report-wrap');
+  if (!isAgent) {
+    locWrap.style.display = 'block';
+    renderLocReport();
+  } else {
+    locWrap.style.display = 'none';
+  }
+
+  const rows = L.slice(0,12);
   document.getElementById('dash-tbl').innerHTML = rows.length
-    ? rows.map(l=>`<tr onclick="openDetail('${l.agentId}')">
-        <td class="mono">${l.agentId}</td><td><strong>${l.name}</strong></td><td>${l.location}</td>
-        <td>${bDoc(l.status)}</td><td>${bCall(l.callStatus)}</td>
+    ? rows.map(l=>`<tr onclick="openDetail('${l.agentId}')" style="cursor:pointer">
+        <td><strong>${l.name}</strong></td>
+        <td class="mono">${l.number}</td>
+        <td>${l.location}</td>
+        <td>${bDoc(l.status)}</td>
+        <td>${bCall(l.callStatus)}</td>
         <td style="font-family:var(--mono);font-size:11px;color:var(--acc2)">${l.assignedTo}</td>
-        <td class="mono">${l.joinDate.split(' ')[0]}</td></tr>`).join('')
+        <td class="mono">${l.joinDate.split(' ')[0]}</td>
+      </tr>`).join('')
     : `<tr><td colspan="7"><div class="empty"><div class="empty-ico">📭</div>No leads from ${CFG.filterDate}</div></td></tr>`;
+}
+
+// ── Number Search ─────────────────────────────────────────────
+function searchByNumber() {
+  const q   = document.getElementById('num-srch').value.trim();
+  const res = document.getElementById('num-result');
+  if (!q) { res.style.display='none'; return; }
+
+  const found = LEADS.filter(l => l.number.includes(q));
+  res.style.display = 'block';
+
+  if (!found.length) {
+    res.innerHTML = `<div style="color:var(--txt2);font-size:13px;padding:8px 0">No lead found with number containing <strong>${q}</strong></div>`;
+    return;
+  }
+
+  res.innerHTML = found.map(l => `
+    <div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:14px;margin-top:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;cursor:pointer" onclick="openDetail('${l.agentId}')">
+      <div><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">NAME</div><div style="font-size:13px;font-weight:600">${l.name}</div></div>
+      <div><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">NUMBER</div><div style="font-size:13px;font-family:var(--mono)">${l.number}</div></div>
+      <div><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">DOC STATUS</div>${bDoc(l.status)}</div>
+      <div><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">CALL STATUS</div>${bCall(l.callStatus)}</div>
+      <div><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">LOCATION</div><div style="font-size:13px">📍 ${l.location}</div></div>
+      <div><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">ASSIGNED TO</div><div style="font-size:13px;color:var(--acc2)">${l.assignedTo}</div></div>
+      <div><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">JOIN DATE</div><div style="font-size:13px">${l.joinDate.split(' ')[0]}</div></div>
+      <div><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">ADHAR</div><div style="font-size:13px;font-family:var(--mono)">${l.adhar||'—'}</div></div>
+    </div>`).join('');
+}
+
+// ── Location Report ───────────────────────────────────────────
+function renderLocReport() {
+  const groupBy = document.getElementById('loc-group')?.value || 'location';
+  const map = {};
+  LEADS.forEach(l => {
+    // Try to extract state from location (last word or full location)
+    const loc = groupBy === 'state' ? extractState(l.location) : l.location;
+    if (!map[loc]) map[loc] = {total:0,verified:0,unverified:0,called:0,notCalled:0,closed:0};
+    map[loc].total++;
+    if (l.status==='Verified') map[loc].verified++; else map[loc].unverified++;
+    if (l.callStatus!=='NOT CALLED') map[loc].called++; else map[loc].notCalled++;
+    if (l.callStatus==='CLOSE') map[loc].closed++;
+  });
+
+  const rows = Object.entries(map)
+    .sort((a,b) => b[1].total - a[1].total)
+    .slice(0, 100);
+
+  document.getElementById('loc-tbl').innerHTML = rows.map(([loc, d]) => `
+    <tr>
+      <td><strong>${loc||'Unknown'}</strong></td>
+      <td class="mono" style="color:var(--acc)">${d.total}</td>
+      <td class="mono" style="color:var(--acc2)">${d.verified}</td>
+      <td class="mono" style="color:var(--acc3)">${d.unverified}</td>
+      <td class="mono">${d.called}</td>
+      <td class="mono" style="color:var(--txt2)">${d.notCalled}</td>
+      <td class="mono" style="color:var(--acc2)">${d.closed}</td>
+    </tr>`).join('');
+}
+
+function extractState(location) {
+  if (!location) return 'Unknown';
+  // Common Indian state extraction — last meaningful word
+  const parts = location.trim().split(/[\s,]+/);
+  return parts[parts.length - 1] || location;
+}
+
+function exportLocationReport() {
+  const groupBy = document.getElementById('loc-group')?.value || 'location';
+  const map = {};
+  LEADS.forEach(l => {
+    const loc = groupBy === 'state' ? extractState(l.location) : l.location;
+    if (!map[loc]) map[loc] = {total:0,verified:0,unverified:0,called:0,notCalled:0,closed:0};
+    map[loc].total++;
+    if (l.status==='Verified') map[loc].verified++; else map[loc].unverified++;
+    if (l.callStatus!=='NOT CALLED') map[loc].called++; else map[loc].notCalled++;
+    if (l.callStatus==='CLOSE') map[loc].closed++;
+  });
+  const header = 'Location,Total,Verified,Unverified,Called,Not Called,Closed\n';
+  const rows = Object.entries(map)
+    .sort((a,b)=>b[1].total-a[1].total)
+    .map(([loc,d])=>`"${loc}",${d.total},${d.verified},${d.unverified},${d.called},${d.notCalled},${d.closed}`)
+    .join('\n');
+  const blob = new Blob([header+rows], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'location_report_' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+  toast('✅ Location report exported', 'ok');
 }
 
 // ═══════════════════════════════════════════════════
 //  MY LEADS
 // ═══════════════════════════════════════════════════
 // ── AGENT STATE ──────────────────────────────────────────────
-let myLeadTab   = 'all';    // 'all' | 'verified'
-let drFrom      = '';
-let drTo        = '';
+let myLeadTab = 'all';
 
 function switchLeadTab(tab) {
   myLeadTab = tab;
-  myPage    = 1;
+  myPage = 1;
   document.getElementById('vtab-all').classList.toggle('active', tab==='all');
   document.getElementById('vtab-verified').classList.toggle('active', tab==='verified');
-  renderMyTable();
-}
-
-function applyDateRange() {
-  drFrom = document.getElementById('dr-from').value;
-  drTo   = document.getElementById('dr-to').value;
-  myPage = 1;
-  renderMyTable();
-}
-
-function clearDateRange() {
-  drFrom = drTo = '';
-  document.getElementById('dr-from').value = '';
-  document.getElementById('dr-to').value   = '';
-  myPage = 1;
   renderMyTable();
 }
 
@@ -1139,21 +1269,21 @@ function renderMyLeads() {
 }
 
 function renderAgentStats() {
-  const all      = myLeads();
-  const total    = all.length;
-  const verified = all.filter(l => l.status==='Verified').length;
-  const unverif  = total - verified;
+  const all     = myLeads();
+  const total   = all.length;
+  const ver     = all.filter(l=>l.status==='Verified').length;
+  const unver   = total - ver;
   document.getElementById('ag-stats').innerHTML = `
     <div class="ag-stat">
       <div class="ag-stat-val" style="color:var(--acc)">${total}</div>
       <div class="ag-stat-lbl">Total Assigned</div>
     </div>
     <div class="ag-stat">
-      <div class="ag-stat-val" style="color:var(--acc2)">${verified}</div>
+      <div class="ag-stat-val" style="color:var(--acc2)">${ver}</div>
       <div class="ag-stat-lbl">✓ Verified</div>
     </div>
     <div class="ag-stat">
-      <div class="ag-stat-val" style="color:var(--acc3)">${unverif}</div>
+      <div class="ag-stat-val" style="color:var(--acc3)">${unver}</div>
       <div class="ag-stat-lbl">⚠ Unverified</div>
     </div>`;
 }
@@ -1165,52 +1295,40 @@ function renderMyTable() {
   const flt = document.getElementById('my-flt').value;
   let leads = myLeads();
 
-  // Tab filter
-  if (myLeadTab === 'verified') {
-    leads = leads.filter(l => l.status === 'Verified');
-  }
-
-  // Call date range filter
-  if (drFrom) leads = leads.filter(l => {
-    const d = l.callLogs.length ? l.callLogs[l.callLogs.length-1].date : '';
-    return d >= drFrom;
-  });
-  if (drTo) leads = leads.filter(l => {
-    const d = l.callLogs.length ? l.callLogs[l.callLogs.length-1].date : '';
-    return d && d <= drTo;
-  });
-
-  if (q)   leads = leads.filter(l => l.name.toLowerCase().includes(q) || l.location.toLowerCase().includes(q) || l.agentId.includes(q));
-  if (flt) leads = leads.filter(l => l.callStatus === flt);
+  if (myLeadTab === 'verified') leads = leads.filter(l => l.status==='Verified');
+  if (q)   leads = leads.filter(l => l.name.toLowerCase().includes(q) || l.number.includes(q));
+  if (flt) leads = leads.filter(l => l.callStatus===flt);
 
   const page = paginate(leads, myPage, PS);
-
   document.getElementById('my-tbl-title').textContent =
     myLeadTab==='verified' ? '✓ Verified Leads' : '📞 My Leads';
 
   document.getElementById('my-tbl').innerHTML = page.length
     ? page.map(l => {
-        const lastLog    = l.callLogs.length ? l.callLogs[l.callLogs.length-1] : null;
-        const lastDate   = lastLog ? lastLog.date : '—';
         const isVerified = l.status === 'Verified';
-        const hasAdhar   = l.adhar && l.adhar.trim() !== '';
+        const hasAdhar   = l.adhar && l.adhar.trim();
         const rowCls     = (hasAdhar ? 'has-adhar' : '') + (isVerified ? ' is-verified' : '');
-        const canLog     = !isVerified;  // locked if Verified
-        const adharCell  = hasAdhar
-          ? `<span class="adhar-dot" style="font-family:var(--mono);font-size:11px;color:var(--acc2)">● ${l.adhar}</span>`
+        const lastLog    = l.callLogs.length ? l.callLogs[l.callLogs.length-1] : null;
+
+        const adharCell = hasAdhar
+          ? `<span style="color:var(--acc2);font-family:var(--mono);font-size:11px">● ${l.adhar}</span>`
           : `<span style="color:var(--txt3);font-size:11px">—</span>`;
+
         const actionCell = isVerified
-          ? `<span style="font-size:11px;color:var(--acc2)">✓ Verified</span>`
-          : `<button class="act-btn" onclick="openLog('${l.agentId}')">📞 Log Call</button>`;
+          ? `<span style="font-size:11px;color:var(--acc2);font-family:var(--mono)">🔒 Verified</span>`
+          : `<button class="act-btn" onclick="openLog('${l.agentId}')">📝 Entry</button>`;
+
         return `<tr class="${rowCls}">
-          <td class="mono" style="white-space:nowrap">${l.agentId}</td>
-          <td style="min-width:130px"><strong>${l.name}</strong><br>
-            <span style="font-family:var(--mono);font-size:11px;color:var(--txt2)">${l.number}</span></td>
-          <td style="min-width:90px">${l.location}</td>
-          <td style="min-width:130px">${adharCell}</td>
+          <td>
+            <div style="font-weight:600;font-size:13px">${l.name}</div>
+            ${lastLog ? `<div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-top:2px">${bCall(l.callStatus)}</div>` : ''}
+          </td>
+          <td class="mono" style="font-size:12px">${l.number}</td>
+          <td>${adharCell}</td>
           <td>${bDoc(l.status)}</td>
-          <td style="min-width:100px">${bCall(l.callStatus)}</td>
-          <td class="mono" style="white-space:nowrap">${lastDate}</td>
+          <td class="mono" style="font-size:11px">${l.joinDate.split(' ')[0]}</td>
+          <td style="font-size:12px">${l.location}</td>
+          <td>${lastLog ? bCall(lastLog.status) : bCall('NOT CALLED')}</td>
           <td style="white-space:nowrap">${actionCell}</td>
         </tr>`;
       }).join('')
