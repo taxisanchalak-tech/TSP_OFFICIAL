@@ -199,6 +199,33 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+
+/* Adhar verified row highlight */
+tr.has-adhar td{background:rgba(6,214,160,.06)}
+tr.has-adhar:hover td{background:rgba(6,214,160,.11)}
+tr.has-adhar .adhar-dot::before{content:"●";color:var(--acc2);margin-right:4px;font-size:10px}
+
+/* Verified locked row */
+tr.is-verified td{opacity:.7}
+tr.is-verified{cursor:default}
+
+/* Agent dashboard cards */
+.ag-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.ag-stat{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;text-align:center}
+.ag-stat-val{font-family:var(--dis);font-size:28px;font-weight:800;margin-bottom:4px}
+.ag-stat-lbl{font-size:11px;color:var(--txt2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.8px}
+
+/* PIN dots style */
+#li-pass{letter-spacing:4px;font-size:18px}
+
+/* Verified tab */
+.vtab-bar{display:flex;gap:4px;background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:3px;width:fit-content;margin-bottom:18px}
+.vtab{padding:6px 18px;border:none;border-radius:6px;background:transparent;color:var(--txt2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.vtab.active{background:var(--surf);color:var(--txt);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+
+/* Date range filter */
+.dr-wrap{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.dr-lbl{font-size:12px;color:var(--txt2);font-family:var(--mono)}
 </style>
 </head>
 <body>
@@ -265,17 +292,19 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
   </div>
   <div class="brand-sub">// ID VERIFICATION DEPARTMENT //</div>
 
-  <div class="err-box" id="login-err">Invalid credentials. Please try again.</div>
+  <div class="err-box" id="login-err">Invalid PIN. Please try again.</div>
 
   <div class="fg">
-    <label class="lbl">Username</label>
-    <input class="inp" id="li-user" type="text" placeholder="Enter username" autocomplete="off">
+    <label class="lbl">Select Your Name</label>
+    <select class="sel" id="li-user">
+      <option value="">— Select Name —</option>
+    </select>
   </div>
   <div class="fg">
-    <label class="lbl">Password</label>
-    <input class="inp" id="li-pass" type="password" placeholder="••••••••">
+    <label class="lbl">Enter PIN</label>
+    <input class="inp" id="li-pass" type="password" placeholder="Enter your PIN" maxlength="10" autocomplete="off">
   </div>
-  <div class="fg">
+  <div class="fg" id="dept-wrap">
     <label class="lbl">Department</label>
     <select class="sel" id="li-dept">
       <option value="id_verification">ID Verification</option>
@@ -283,9 +312,6 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
     </select>
   </div>
   <button class="btn btn-p" id="li-btn" onclick="doLogin()">Sign In →</button>
-  <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--txt3);font-family:var(--mono)">
-    admin/admin123 · manager/mgr123 · agent1/agt123 · dipesh/mgr123
-  </div>
 </div>
 </div>
 
@@ -322,6 +348,7 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
       <div class="topbar-r">
         <span class="mode-badge live-badge" id="mode-badge">● LIVE</span>
         <span class="date-badge" id="tb-date"></span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--txt3);padding:4px 8px">v4.0</span>
       </div>
     </div>
     <div class="content">
@@ -343,23 +370,45 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
       <!-- MY LEADS -->
       <div class="view" id="v-my-leads">
         <div class="sec-hdr">
-          <div><div class="sec-title">My Leads</div><div class="sec-sub">Your assigned leads — log calls here</div></div>
+          <div><div class="sec-title">My Leads</div><div class="sec-sub" id="my-sub">Your assigned leads</div></div>
         </div>
-        <div class="info-ban">Your leads are matched from the sheet where <strong>Assign_To = your name</strong>. Fill all 3 fields when logging a call.</div>
+
+        <!-- Agent dashboard stats -->
+        <div class="ag-stats" id="ag-stats"></div>
+
+        <!-- Date range filter -->
+        <div class="dr-wrap">
+          <span class="dr-lbl">Filter by Call Date:</span>
+          <input class="inp" id="dr-from" type="date" style="width:140px;padding:6px 10px;font-size:12px">
+          <span class="dr-lbl">to</span>
+          <input class="inp" id="dr-to" type="date" style="width:140px;padding:6px 10px;font-size:12px">
+          <button class="btn btn-s btn-sm" onclick="applyDateRange()">Apply</button>
+          <button class="btn btn-s btn-sm" onclick="clearDateRange()">Clear</button>
+        </div>
+
+        <!-- Tab bar: All / Verified -->
+        <div class="vtab-bar">
+          <button class="vtab active" id="vtab-all" onclick="switchLeadTab('all')">All Leads</button>
+          <button class="vtab" id="vtab-verified" onclick="switchLeadTab('verified')">✓ Verified</button>
+        </div>
+
         <div class="tcard">
           <div class="thead-bar">
-            <div class="thead-title">📞 My Leads</div>
+            <div class="thead-title" id="my-tbl-title">📞 My Leads</div>
             <div class="controls">
               <input class="srch" id="my-srch" placeholder="Search name / location…">
               <select class="fsel" id="my-flt">
-                <option value="">All Status</option>
+                <option value="">All Call Status</option>
                 <option value="OPEN">OPEN</option>
                 <option value="CLOSE">CLOSE</option>
                 <option value="NOT CALLED">Not Called</option>
               </select>
             </div>
           </div>
-          <div class="tbl-wrap"><table><thead><tr><th>ID</th><th>Name / Number</th><th>Location</th><th>Doc</th><th>Call Status</th><th>Last Called</th><th>Action</th></tr></thead>
+          <div class="tbl-wrap"><table><thead><tr>
+            <th>ID</th><th>Name / Number</th><th>Location</th>
+            <th>Adhar</th><th>Doc</th><th>Call Status</th><th>Last Called</th><th>Action</th>
+          </tr></thead>
           <tbody id="my-tbl"></tbody></table></div>
           <div class="pag" id="my-pag"></div>
         </div>
@@ -441,10 +490,11 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
         <div class="fg">
           <label class="lbl">Call Date<span class="req">*</span></label>
           <input class="inp" id="log-date" type="date">
+          <div id="log-date-lock-note" style="display:none;font-size:11px;color:var(--acc3);margin-top:4px">⚠ Call date is locked after first save</div>
         </div>
         <div class="fg">
           <label class="lbl">Called By</label>
-          <input class="inp" id="log-by" type="text" readonly style="opacity:.6">
+          <input class="inp" id="log-by" type="text" readonly style="opacity:.6;cursor:not-allowed">
         </div>
       </div>
     </div>
@@ -477,7 +527,7 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
         <div class="fg"><label class="lbl">Username<span class="req">*</span></label><input class="inp" id="u-uname" placeholder="e.g. priya_s"></div>
       </div>
       <div class="fg-row">
-        <div class="fg"><label class="lbl">Password<span class="req">*</span></label><input class="inp" id="u-pass" type="password" placeholder="Min 6 chars"></div>
+        <div class="fg"><label class="lbl">PIN <span style="font-size:10px;color:var(--txt2)">(agent login PIN)</span><span class="req">*</span></label><input class="inp" id="u-pass" type="text" placeholder="e.g. 1234 or any PIN" maxlength="10"></div>
         <div class="fg"><label class="lbl">Role<span class="req">*</span></label>
           <select class="sel" id="u-role"><option value="agent">Agent</option><option value="manager">Manager</option><option value="admin">Admin</option></select>
         </div>
@@ -570,11 +620,11 @@ function saveCfg() {
 //  LOCAL USERS  (stored in localStorage)
 // ═══════════════════════════════════════════════════
 const DEFAULT_USERS = [
-  { id:'u1', name:'Super Admin',    username:'admin',   password:'admin123', role:'admin',   dept:'both',            sheetName:'' },
-  { id:'u2', name:'Dipesh Manager', username:'dipesh',  password:'mgr123',   role:'manager', dept:'id_verification', sheetName:'DIPESH' },
-  { id:'u3', name:'Kanchan Agent',  username:'kanchan', password:'agt123',   role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
-  { id:'u4', name:'ID Agent 1',     username:'agent1',  password:'agt123',   role:'agent',   dept:'id_verification', sheetName:'ID VERIFICATION' },
-  { id:'u5', name:'Recharge Agent', username:'ragent1', password:'agt123',   role:'agent',   dept:'recharge',        sheetName:'RECHARGE' },
+  { id:'u1', name:'Super Admin',    username:'admin',   password:'1234', role:'admin',   dept:'both',            sheetName:'' },
+  { id:'u2', name:'Dipesh Manager', username:'dipesh',  password:'1234', role:'manager', dept:'id_verification', sheetName:'DIPESH' },
+  { id:'u3', name:'Kanchan Agent',  username:'kanchan', password:'1234', role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
+  { id:'u4', name:'ID Agent 1',     username:'agent1',  password:'1234', role:'agent',   dept:'id_verification', sheetName:'ID VERIFICATION' },
+  { id:'u5', name:'Recharge Agent', username:'ragent1', password:'1234', role:'agent',   dept:'recharge',        sheetName:'RECHARGE' },
 ];
 
 function getUsers() {
@@ -664,6 +714,31 @@ function showLogin() {
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('login-page').style.display   = 'flex';
   document.getElementById('app').style.display          = 'none';
+  populateLoginDropdown();
+}
+
+function populateLoginDropdown() {
+  const users = getUsers();
+  const sel   = document.getElementById('li-user');
+  sel.innerHTML = '<option value="">— Select Name —</option>';
+  users.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value       = u.username;
+    opt.textContent = u.name + (u.role !== 'agent' ? ' (' + u.role + ')' : '');
+    sel.appendChild(opt);
+  });
+
+  // Show dept selector only for admin/manager
+  sel.onchange = function() {
+    const u = users.find(x => x.username === this.value);
+    const dw = document.getElementById('dept-wrap');
+    if (u && (u.role === 'admin' || u.role === 'manager' || u.dept === 'both')) {
+      dw.style.display = 'block';
+    } else {
+      dw.style.display = 'none';
+    }
+  };
+  document.getElementById('dept-wrap').style.display = 'none';
 }
 
 function showApp() {
@@ -843,8 +918,9 @@ function mergeLocalLogs() {
 // ═══════════════════════════════════════════════════
 async function doLogin() {
   const uname = document.getElementById('li-user').value.trim();
-  const pass  = document.getElementById('li-pass').value;
+  const pass  = document.getElementById('li-pass').value.trim();
   const dept  = document.getElementById('li-dept').value;
+  if (!uname) { document.getElementById('login-err').style.display='block'; btn.disabled=false; btn.textContent='Sign In →'; return; }
   const btn   = document.getElementById('li-btn');
 
   btn.disabled    = true;
@@ -970,19 +1046,18 @@ function navigateTo(view) {
 //  HELPERS
 // ═══════════════════════════════════════════════════
 function myLeads() {
-  // Build set of all names this user could be matched by in Assign_To column
+  // Priority 1: sheetName field (most accurate)
+  // Priority 2: first word of name (e.g. "Dipesh Manager" → "DIPESH")
+  // Priority 3: username, full name
+  const sn = (CU.sheetName || '').trim().toUpperCase();
   const names = new Set([
+    sn,
     CU.name.trim().toUpperCase(),
-    CU.username.trim().toUpperCase(),
-    (CU.sheetName || '').trim().toUpperCase(),
-    // also first word of name (e.g. "Dipesh Manager" -> "DIPESH")
     CU.name.trim().split(' ')[0].toUpperCase(),
+    CU.username.trim().toUpperCase(),
   ].filter(Boolean));
 
-  return LEADS.filter(l => {
-    const a = l.assignedTo.trim().toUpperCase();
-    return names.has(a);
-  });
+  return LEADS.filter(l => names.has(l.assignedTo.trim().toUpperCase()));
 }
 
 function bDoc(s)  { return s==='Verified' ? '<span class="badge b-v">✓ Verified</span>' : '<span class="badge b-u">⚠ Unverified</span>'; }
@@ -1027,11 +1102,60 @@ function renderDashboard() {
 // ═══════════════════════════════════════════════════
 //  MY LEADS
 // ═══════════════════════════════════════════════════
+// ── AGENT STATE ──────────────────────────────────────────────
+let myLeadTab   = 'all';    // 'all' | 'verified'
+let drFrom      = '';
+let drTo        = '';
+
+function switchLeadTab(tab) {
+  myLeadTab = tab;
+  myPage    = 1;
+  document.getElementById('vtab-all').classList.toggle('active', tab==='all');
+  document.getElementById('vtab-verified').classList.toggle('active', tab==='verified');
+  renderMyTable();
+}
+
+function applyDateRange() {
+  drFrom = document.getElementById('dr-from').value;
+  drTo   = document.getElementById('dr-to').value;
+  myPage = 1;
+  renderMyTable();
+}
+
+function clearDateRange() {
+  drFrom = drTo = '';
+  document.getElementById('dr-from').value = '';
+  document.getElementById('dr-to').value   = '';
+  myPage = 1;
+  renderMyTable();
+}
+
 function renderMyLeads() {
   document.getElementById('v-my-leads').classList.add('active');
+  renderAgentStats();
   renderMyTable();
-  document.getElementById('my-srch').oninput  = () => { myPage=1; renderMyTable(); };
+  document.getElementById('my-srch').oninput = () => { myPage=1; renderMyTable(); };
   document.getElementById('my-flt').onchange  = () => { myPage=1; renderMyTable(); };
+}
+
+function renderAgentStats() {
+  const all      = myLeads();
+  const total    = all.length;
+  const verified = all.filter(l => l.status==='Verified').length;
+  const unverif  = total - verified;
+  document.getElementById('ag-stats').innerHTML = `
+    <div class="ag-stat">
+      <div class="ag-stat-val" style="color:var(--acc)">${total}</div>
+      <div class="ag-stat-lbl">Total Assigned</div>
+    </div>
+    <div class="ag-stat">
+      <div class="ag-stat-val" style="color:var(--acc2)">${verified}</div>
+      <div class="ag-stat-lbl">✓ Verified</div>
+    </div>
+    <div class="ag-stat">
+      <div class="ag-stat-val" style="color:var(--acc3)">${unverif}</div>
+      <div class="ag-stat-lbl">⚠ Unverified</div>
+    </div>`;
 }
 
 function setMyPage(p) { myPage=p; renderMyTable(); }
@@ -1040,23 +1164,58 @@ function renderMyTable() {
   const q   = document.getElementById('my-srch').value.toLowerCase();
   const flt = document.getElementById('my-flt').value;
   let leads = myLeads();
-  if (q)   leads = leads.filter(l => l.name.toLowerCase().includes(q) || l.location.toLowerCase().includes(q));
+
+  // Tab filter
+  if (myLeadTab === 'verified') {
+    leads = leads.filter(l => l.status === 'Verified');
+  }
+
+  // Call date range filter
+  if (drFrom) leads = leads.filter(l => {
+    const d = l.callLogs.length ? l.callLogs[l.callLogs.length-1].date : '';
+    return d >= drFrom;
+  });
+  if (drTo) leads = leads.filter(l => {
+    const d = l.callLogs.length ? l.callLogs[l.callLogs.length-1].date : '';
+    return d && d <= drTo;
+  });
+
+  if (q)   leads = leads.filter(l => l.name.toLowerCase().includes(q) || l.location.toLowerCase().includes(q) || l.agentId.includes(q));
   if (flt) leads = leads.filter(l => l.callStatus === flt);
+
   const page = paginate(leads, myPage, PS);
+
+  document.getElementById('my-tbl-title').textContent =
+    myLeadTab==='verified' ? '✓ Verified Leads' : '📞 My Leads';
+
   document.getElementById('my-tbl').innerHTML = page.length
     ? page.map(l => {
-        const lastDate = l.callLogs.length ? l.callLogs[l.callLogs.length-1].date : '—';
-        return `<tr>
+        const lastLog    = l.callLogs.length ? l.callLogs[l.callLogs.length-1] : null;
+        const lastDate   = lastLog ? lastLog.date : '—';
+        const isVerified = l.status === 'Verified';
+        const hasAdhar   = l.adhar && l.adhar.trim() !== '';
+        const rowCls     = (hasAdhar ? 'has-adhar' : '') + (isVerified ? ' is-verified' : '');
+        const canLog     = !isVerified;  // locked if Verified
+        const adharCell  = hasAdhar
+          ? `<span class="adhar-dot" style="font-family:var(--mono);font-size:11px;color:var(--acc2)">● ${l.adhar}</span>`
+          : `<span style="color:var(--txt3);font-size:11px">—</span>`;
+        const actionCell = isVerified
+          ? `<span style="font-size:11px;color:var(--acc2)">✓ Verified</span>`
+          : `<button class="act-btn" onclick="openLog('${l.agentId}')">📞 Log Call</button>`;
+        return `<tr class="${rowCls}">
           <td class="mono" style="white-space:nowrap">${l.agentId}</td>
-          <td style="min-width:130px"><strong>${l.name}</strong><br><span style="font-family:var(--mono);font-size:11px;color:var(--txt2)">${l.number}</span></td>
+          <td style="min-width:130px"><strong>${l.name}</strong><br>
+            <span style="font-family:var(--mono);font-size:11px;color:var(--txt2)">${l.number}</span></td>
           <td style="min-width:90px">${l.location}</td>
+          <td style="min-width:130px">${adharCell}</td>
           <td>${bDoc(l.status)}</td>
           <td style="min-width:100px">${bCall(l.callStatus)}</td>
           <td class="mono" style="white-space:nowrap">${lastDate}</td>
-          <td style="white-space:nowrap"><button class="act-btn" onclick="openLog('${l.agentId}')">📞 Log Call</button></td>
+          <td style="white-space:nowrap">${actionCell}</td>
         </tr>`;
       }).join('')
-    : `<tr><td colspan="7"><div class="empty"><div class="empty-ico">📭</div>No leads found</div></td></tr>`;
+    : `<tr><td colspan="8"><div class="empty"><div class="empty-ico">📭</div>No leads found</div></td></tr>`;
+
   document.getElementById('my-pag').innerHTML = pagHtml(leads.length, myPage, PS, 'setMyPage', 'leads');
 }
 
@@ -1157,16 +1316,49 @@ function openDetail(aid) {
 function openLog(aid) {
   const l = LEADS.find(x => x.agentId === aid);
   if (!l) return;
+
+  // Block if Verified
+  if (l.status === 'Verified') {
+    toast('⚠ This lead is Verified — no more edits allowed', 'err');
+    return;
+  }
+
   activeId = aid;
+
+  // Check if call date already exists (locked)
+  const existingLog  = l.callLogs.find(lg => lg.by === CU.name && lg.date);
+  const lockedDate   = existingLog ? existingLog.date : '';
+  const dateReadonly = lockedDate !== '';
+
   document.getElementById('log-info').innerHTML = `
     <div><div class="di-lbl">Name</div><div class="di-val">${l.name}</div></div>
     <div><div class="di-lbl">Agent ID</div><div class="di-val mono">${l.agentId}</div></div>
     <div><div class="di-lbl">Phone</div><div class="di-val mono">${l.number}</div></div>
     <div><div class="di-lbl">Location</div><div class="di-val">📍 ${l.location}</div></div>`;
-  document.getElementById('log-status').value  = '';
-  document.getElementById('log-remark').value  = '';
-  document.getElementById('log-date').value    = new Date().toISOString().split('T')[0];
-  document.getElementById('log-by').value      = CU.name;
+
+  // Pre-fill last entry if exists
+  const lastLog = l.callLogs.length ? l.callLogs[l.callLogs.length-1] : null;
+  document.getElementById('log-status').value = lastLog ? lastLog.status : '';
+  document.getElementById('log-remark').value = '';  // always blank for new entry
+  document.getElementById('log-by').value     = CU.name;
+
+  // Date: locked if previously set by this agent
+  const dateEl   = document.getElementById('log-date');
+  const lockNote = document.getElementById('log-date-lock-note');
+  if (dateReadonly) {
+    dateEl.value    = lockedDate;
+    dateEl.readOnly = true;
+    dateEl.style.opacity = '0.6';
+    dateEl.style.cursor  = 'not-allowed';
+    lockNote.style.display = 'block';
+  } else {
+    dateEl.value    = new Date().toISOString().split('T')[0];
+    dateEl.readOnly = false;
+    dateEl.style.opacity = '1';
+    dateEl.style.cursor  = 'pointer';
+    lockNote.style.display = 'none';
+  }
+
   openModal('m-log');
 }
 
@@ -1174,28 +1366,47 @@ function saveLog() {
   const status  = document.getElementById('log-status').value;
   const remark  = document.getElementById('log-remark').value.trim();
   const date    = document.getElementById('log-date').value;
-  if (!status)  { toast('⚠️ Select call status', 'err'); return; }
-  if (!remark)  { toast('⚠️ Remarks required', 'err'); return; }
-  if (!date)    { toast('⚠️ Select call date', 'err'); return; }
+
+  // All fields required
+  if (!status)  { toast('⚠ Select call status', 'err'); return; }
+  if (!remark)  { toast('⚠ Remarks are required', 'err'); return; }
+  if (!date)    { toast('⚠ Select call date', 'err'); return; }
 
   const lead = LEADS.find(l => l.agentId === activeId);
   if (!lead) return;
 
+  // Double-check not Verified
+  if (lead.status === 'Verified') {
+    toast('⚠ This lead is Verified — cannot log more calls', 'err'); return;
+  }
+
   const btn = document.getElementById('log-save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
 
-  // Save to localStorage (acts as local DB since API key = read-only)
-  appendToSheet(CFG.logsTab, [lead.agentId, status, remark, date, CU.name,
-    new Date().toISOString(), lead.name, lead.location]);
+  // Save to Entries sheet tab (localStorage)
+  const entryRow = [
+    lead.agentId,      // Agent ID
+    lead.name,         // Lead Name
+    lead.number,       // Number
+    lead.location,     // Location
+    lead.status,       // Doc Status
+    status,            // Call Status
+    remark,            // Remarks
+    date,              // Call Date
+    CU.name,           // Called By
+    new Date().toISOString()  // Saved At
+  ];
+  appendToSheet('Entries', entryRow);
 
-  // Update in-memory lead
+  // Update in-memory
   lead.callLogs.push({ status, remark, date, by: CU.name });
   lead.callStatus = status;
 
   btn.disabled = false; btn.textContent = '💾 Save Entry';
   closeModal('m-log');
-  toast('✅ Call log saved!', 'ok');
-  if (window._curView === 'my-leads') renderMyTable();
+  toast('✅ Entry saved to Entries sheet!', 'ok');
+  renderAgentStats();
+  renderMyTable();
   if (window._curView === 'all-leads') renderAllTable();
 }
 
@@ -1415,16 +1626,16 @@ function renderReports() {
 //  EXPORT LOGS CSV
 // ═══════════════════════════════════════════════════
 function exportLogs() {
-  const logs = getLocalLogs(CFG.logsTab);
-  if (!logs.length) { toast('⚠️ No call logs saved yet', 'err'); return; }
-  const header = 'Agent ID,Call Status,Remarks,Call Date,Called By,Saved At,Lead Name,Location\n';
-  const rows   = logs.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const logs = getLocalLogs('Entries');
+  if (!logs.length) { toast('⚠ No entries saved yet', 'err'); return; }
+  const header = 'Agent ID,Lead Name,Number,Location,Doc Status,Call Status,Remarks,Call Date,Called By,Saved At\n';
+  const rows   = logs.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
   const blob   = new Blob([header+rows], { type:'text/csv' });
   const a      = document.createElement('a');
   a.href       = URL.createObjectURL(blob);
-  a.download   = `call_logs_${CFG.filterDate}.csv`;
+  a.download   = `entries_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
-  toast('✅ CSV downloaded', 'ok');
+  toast('✅ Entries CSV downloaded', 'ok');
 }
 
 // ═══════════════════════════════════════════════════
