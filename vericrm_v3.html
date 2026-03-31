@@ -618,6 +618,108 @@ tr.is-verified{cursor:default}
         </div>
       </div>
 
+
+      <!-- RECHARGE DASHBOARD -->
+      <div class="view" id="v-re-dashboard">
+        <div class="sec-hdr">
+          <div><div class="sec-title">💳 Recharge Dashboard</div><div class="sec-sub">Your recharge performance</div></div>
+          <button class="btn btn-s btn-sm" onclick="hardRefresh()">🔄 Refresh</button>
+        </div>
+        <div class="stats" id="re-dash-stats"></div>
+        <div class="tcard">
+          <div class="thead-bar">
+            <div class="thead-title">📋 My Call History</div>
+            <div class="controls">
+              <input class="inp" id="re-date-from" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderReDashboard()">
+              <span style="font-size:12px;color:var(--txt2)">to</span>
+              <input class="inp" id="re-date-to" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderReDashboard()">
+              <button class="btn btn-s btn-sm" onclick="setReQuick(1)">Today</button>
+              <button class="btn btn-s btn-sm" onclick="setReQuick(7)">7d</button>
+              <button class="btn btn-s btn-sm" onclick="setReQuick(30)">30d</button>
+              <button class="btn btn-s btn-sm" onclick="clearReDates()">All</button>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Number</th><th>Location</th><th>Call Status</th><th>Sale Done</th><th>Call Date</th><th>Remarks</th></tr></thead>
+              <tbody id="re-calls-tbl"></tbody>
+            </table>
+          </div>
+          <div class="pag" id="re-calls-pag"></div>
+        </div>
+      </div>
+
+      <!-- RECHARGE LEADS -->
+      <div class="view" id="v-re-leads">
+        <div class="sec-hdr">
+          <div><div class="sec-title">💳 My Recharge Leads</div><div class="sec-sub" id="re-sub">Assigned recharge leads · sorted by newest</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="srch" id="re-srch-num" placeholder="🔍 Search by number…" style="width:200px" onkeydown="if(event.key==='Enter')searchReNumber()">
+            <button class="btn btn-s btn-sm" onclick="searchReNumber()">Search</button>
+          </div>
+        </div>
+        <div id="re-num-result" style="margin-bottom:12px;display:none"></div>
+        <div class="ag-stats" id="re-stats"></div>
+        <div class="tcard">
+          <div style="padding:10px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <div class="vtab-bar" style="margin-bottom:0">
+              <button class="vtab active" id="re-tab-all"    onclick="switchReTab('all')">All</button>
+              <button class="vtab"        id="re-tab-blank"  onclick="switchReTab('blank')">⬜ Pending</button>
+              <button class="vtab"        id="re-tab-called" onclick="switchReTab('called')">📞 Called</button>
+            </div>
+            <div class="controls">
+              <input class="srch" id="re-srch" placeholder="Search name / number…" style="width:160px">
+              <select class="fsel" id="re-flt-call">
+                <option value="">All Call Status</option>
+                <option value="NOT CALLED">Not Called</option>
+                <option value="OPEN">OPEN</option>
+                <option value="CLOSE">CLOSE</option>
+              </select>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Number</th><th>Location</th><th>Recharge Status</th><th>Call Status</th><th>Sale Done</th><th>Call Date</th><th>Action</th></tr></thead>
+              <tbody id="re-tbl"></tbody>
+            </table>
+          </div>
+          <div class="pag" id="re-pag"></div>
+        </div>
+      </div>
+
+      <!-- RECHARGE REPORTS (admin only) -->
+      <div class="view" id="v-re-reports">
+        <div class="sec-hdr">
+          <div><div class="sec-title">💳 Recharge Reports</div><div class="sec-sub">Agent performance · Recharge dept</div></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--txt2)">Call Date:</span>
+            <input class="inp" id="re-rep-from" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderReReports()">
+            <span style="font-size:12px;color:var(--txt2)">to</span>
+            <input class="inp" id="re-rep-to" type="date" style="width:130px;padding:6px 10px;font-size:12px" onchange="renderReReports()">
+            <button class="btn btn-s btn-sm" onclick="clearReRepDates()">Clear</button>
+            <button class="btn btn-s btn-sm" onclick="setReRepQuick(7)">7d</button>
+            <button class="btn btn-s btn-sm" onclick="setReRepQuick(30)">30d</button>
+            <button class="btn btn-s btn-sm" onclick="exportReReport()">📥 Export</button>
+          </div>
+        </div>
+        <div class="stats" id="re-rep-stats"></div>
+        <div class="tcard" style="margin-bottom:20px">
+          <div class="thead-bar"><div class="thead-title">📊 Recharge Performance Chart</div></div>
+          <div style="padding:16px 18px"><canvas id="re-chart" style="max-height:300px"></canvas></div>
+        </div>
+        <div class="tcard">
+          <div class="thead-bar"><div class="thead-title">👥 Agent Breakdown</div>
+            <div id="re-rep-range-lbl" style="font-size:11px;color:var(--acc3);font-family:var(--mono)">ALL TIME</div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Agent</th><th>Total Leads</th><th>Calls Done</th><th>354 Recharged</th><th>999 Recharged</th><th>Revenue</th><th>Remaining</th></tr></thead>
+              <tbody id="re-rep-tbl"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 </div>
@@ -655,6 +757,44 @@ tr.is-verified{cursor:default}
     <div class="m-foot">
       <button class="btn btn-s btn-sm" onclick="closeModal('m-log')">Cancel</button>
       <button class="btn btn-g btn-sm" id="log-save-btn" onclick="saveLog()">💾 Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recharge Entry Modal -->
+<div class="overlay" id="m-re-log">
+  <div class="modal">
+    <div class="m-hdr"><div class="m-title">💳 Log Recharge Entry</div><button class="m-close" onclick="closeModal('m-re-log')">✕</button></div>
+    <div class="m-body">
+      <div class="dg" id="re-log-info"></div>
+      <hr style="border:none;border-top:1px solid var(--bdr);margin:0 0 18px">
+      <div class="fg">
+        <label class="lbl">Call Status<span class="req">*</span></label>
+        <select class="sel" id="re-log-status"><option value="">— Select —</option><option value="OPEN">OPEN</option><option value="CLOSE">CLOSE</option></select>
+      </div>
+      <div class="fg">
+        <label class="lbl">Remarks<span class="req">*</span></label>
+        <textarea class="inp" id="re-log-remark" rows="3" placeholder="Enter call remarks…" style="resize:vertical"></textarea>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label class="lbl">Call Date<span class="req">*</span></label>
+          <input class="inp" id="re-log-date" type="date">
+          <div id="re-log-date-note" style="display:none;font-size:11px;color:var(--acc3);margin-top:4px">⚠ Call date locked after first save</div>
+        </div>
+        <div class="fg">
+          <label class="lbl">Sale Pitched (YES/NO)<span class="req">*</span></label>
+          <select class="sel" id="re-log-sale"><option value="">— Select —</option><option value="YES">YES</option><option value="NO">NO</option></select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="lbl">Called By (your name)</label>
+        <input class="inp" id="re-log-by" type="text" readonly style="opacity:.6;cursor:not-allowed">
+      </div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-s btn-sm" onclick="closeModal('m-re-log')">Cancel</button>
+      <button class="btn btn-g btn-sm" id="re-log-save-btn" onclick="saveReLog()">💾 Save Entry</button>
     </div>
   </div>
 </div>
@@ -882,9 +1022,9 @@ function saveCfg() {
 //  LOCAL USERS  (stored in localStorage)
 // ═══════════════════════════════════════════════════
 const DEFAULT_USERS = [
-  { id:'u1', name:'mayank Admin',    username:'admin',   password:'1234', role:'admin',   dept:'both',            sheetName:'' },
-  { id:'u2', name:'Dipesh', username:'dipesh',  password:'123456', role:'agent', dept:'id_verification', sheetName:'DIPESH' },
-  { id:'u3', name:'nisha g',  username:'kanchan', password:'123456', role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
+  { id:'u1', name:'Super Admin',    username:'admin',   password:'1234', role:'admin',   dept:'both',            sheetName:'' },
+  { id:'u2', name:'Dipesh Manager', username:'dipesh',  password:'1234', role:'manager', dept:'id_verification', sheetName:'DIPESH' },
+  { id:'u3', name:'Kanchan Agent',  username:'kanchan', password:'1234', role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
   { id:'u4', name:'ID Agent 1',     username:'agent1',  password:'1234', role:'agent',   dept:'id_verification', sheetName:'ID VERIFICATION' },
   { id:'u5', name:'Recharge Agent', username:'ragent1', password:'1234', role:'agent',   dept:'recharge',        sheetName:'RECHARGE' },
 ];
@@ -1382,9 +1522,10 @@ async function initApp() {
 
   await loadLeads();
   buildSidebar();
-  // Agents → Agent Dashboard, Admin/Manager → All Leads
+  // Landing page by role + dept
   if (CU.role === 'agent') {
-    navigateTo('agent-dashboard');
+    const d = CU.dept || 'id_verification';
+    navigateTo(d === 'recharge' ? 're-dashboard' : 'agent-dashboard');
   } else {
     navigateTo('all-leads');
   }
@@ -1402,17 +1543,25 @@ async function hardRefresh() {
 function buildSidebar() {
   const role = CU.role;
   const isAgent = CU.role === 'agent';
+  const dept    = CU.dept || 'id_verification';
+  const isRecharge = dept === 'recharge' || dept === 'both';
+  const isIDVeri   = dept === 'id_verification' || dept === 'both';
   const items = [
-    { key:'dashboard',       icon:'📊', label:'Dashboard',    roles:['admin','manager'] },
-    { key:'agent-dashboard', icon:'📊', label:'My Dashboard', roles:['agent'] },
-    { key:'my-leads',        icon:'📞', label:'My Leads',     roles:['agent'], badge: myLeads().length },
-    { key:'all-leads',       icon:'🗂️', label:'All Leads',    roles:['admin','manager'] },
-    { key:'users',           icon:'👥', label:'Manage Users', roles:['admin'] },
-    { key:'reports',         icon:'📈', label:'Reports',      roles:['admin','manager'] },
+    { key:'dashboard',        icon:'📊', label:'Dashboard',       roles:['admin','manager'] },
+    { key:'agent-dashboard',  icon:'📊', label:'My Dashboard',    roles:['agent'], depts:['id_verification','both'] },
+    { key:'my-leads',         icon:'📞', label:'My Leads',        roles:['agent'], badge: myLeads().length, depts:['id_verification','both'] },
+    { key:'re-dashboard',     icon:'💳', label:'My Dashboard',    roles:['agent'], depts:['recharge'] },
+    { key:'re-leads',         icon:'📋', label:'My Leads',        roles:['agent'], depts:['recharge'] },
+    { key:'all-leads',        icon:'🗂️', label:'All Leads',       roles:['admin','manager'] },
+    { key:'users',            icon:'👥', label:'Manage Users',    roles:['admin'] },
+    { key:'reports',          icon:'📈', label:'ID Veri Reports', roles:['admin','manager'] },
+    { key:'re-reports',       icon:'📈', label:'Recharge Reports',roles:['admin','manager'] },
   ];
   let html = '<div class="nav-sec">Main Menu</div>';
   items.forEach(it => {
     if (!it.roles.includes(role)) return;
+    // Check dept restriction if specified
+    if (it.depts && !it.depts.includes(dept)) return;
     const b = it.badge ? `<span class="nav-badge">${it.badge}</span>` : '';
     html += `<div class="nav-it" id="ni-${it.key}" onclick="navigateTo('${it.key}')">`
           + `<span style="font-size:15px">${it.icon}</span>${it.label}${b}</div>`;
@@ -1440,19 +1589,25 @@ function navigateTo(view) {
     'dashboard':       'Dashboard',
     'agent-dashboard': 'My Dashboard',
     'my-leads':        'My Leads',
+    're-dashboard':    'Recharge Dashboard',
+    're-leads':        'My Recharge Leads',
     'all-leads':       'All Leads',
     'users':           'Manage Users',
-    'reports':         'Reports'
+    'reports':         'ID Verification Reports',
+    're-reports':      'Recharge Reports'
   };
   document.getElementById('pg-title').textContent = titles[view] || view;
 
   switch(view) {
-    case 'dashboard':       renderDashboard();      break;
-    case 'agent-dashboard': renderAgentDashboard(); break;
-    case 'my-leads':        renderMyLeads();        break;
-    case 'all-leads':       renderAllLeads();       break;
-    case 'users':           renderUsers();          break;
-    case 'reports':         renderReports();        break;
+    case 'dashboard':       renderDashboard();        break;
+    case 'agent-dashboard': renderAgentDashboard();   break;
+    case 'my-leads':        renderMyLeads();          break;
+    case 're-dashboard':    renderReDashboard();      break;
+    case 're-leads':        renderReLeads();          break;
+    case 'all-leads':       renderAllLeads();         break;
+    case 'users':           renderUsers();            break;
+    case 'reports':         renderReports();          break;
+    case 're-reports':      renderReReports();        break;
   }
 }
 
@@ -2779,6 +2934,422 @@ function exportAgentReport() {
   a.download = 'agent_report_'+new Date().toISOString().split('T')[0]+'.csv';
   a.click();
   toast('✅ Agent report exported','ok');
+}
+
+// ═══════════════════════════════════════════════════
+//  RECHARGE DEPARTMENT — STATE + DATA
+// ═══════════════════════════════════════════════════
+let RE_LEADS   = [];   // recharge leads from New_approved sheet
+let reLeadTab  = 'all';
+let rePage     = 1;
+let reActivRow = null; // rowIndex of lead being logged
+let reChart    = null;
+
+const RE_SHEET  = 'New_approved';
+const RE_COL    = { agentId:0, name:1, number:2, status:3, joinDate:4,
+                    location:5, rechargeStatus:6, callStatus:7,
+                    remarks:8, callDate:9, calledBy:10, assignedTo:11,
+                    saleDone:12, d354Done:13, d354Date:14,
+                    d999Done:15, d999Date:16 };
+
+// ── Load Recharge leads from sheet ──────────────────
+async function loadReLeads() {
+  if (!CFG.scriptUrl) { RE_LEADS = []; return; }
+  showLoader('Loading recharge leads…');
+  try {
+    const sn  = (CU.sheetName||CU.name).trim().toUpperCase();
+    const isAdmin = CU.role==='admin' || CU.role==='manager';
+    const agFilter = isAdmin ? '' : '&assignedTo=' + encodeURIComponent(sn);
+    const url = CFG.scriptUrl
+      + '?action=getRechargeLeads&key=' + encodeURIComponent(CFG.secretKey)
+      + agFilter + '&t=' + Date.now();
+    const res  = await fetch(url);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    RE_LEADS = json.leads || [];
+    hideLoader();
+    toast('✅ ' + RE_LEADS.length + ' recharge leads loaded', 'ok');
+  } catch(err) {
+    hideLoader();
+    toast('⚠ Recharge load error: ' + err.message, 'err');
+    RE_LEADS = [];
+  }
+}
+
+function myReLeads() {
+  const sn    = (CU.sheetName||'').trim().toUpperCase();
+  const names = new Set([sn, CU.name.trim().toUpperCase(),
+    CU.name.trim().split(' ')[0].toUpperCase(),
+    CU.username.trim().toUpperCase()].filter(Boolean));
+  return RE_LEADS.filter(function(l){
+    return names.has((l.assignedTo||'').trim().toUpperCase());
+  });
+}
+
+// ── Recharge Dashboard ───────────────────────────────
+let reDashPage = 1;
+
+function setReQuick(days) {
+  var to = new Date(), from = new Date();
+  from.setDate(from.getDate() - (days-1));
+  var fmt = function(d){ return d.toISOString().split('T')[0]; };
+  var f = document.getElementById('re-date-from');
+  var t = document.getElementById('re-date-to');
+  if(f) f.value = fmt(from); if(t) t.value = fmt(to);
+  renderReDashboard();
+}
+function clearReDates() {
+  var f=document.getElementById('re-date-from'), t=document.getElementById('re-date-to');
+  if(f) f.value=''; if(t) t.value='';
+  renderReDashboard();
+}
+
+function renderReDashboard() {
+  var view = document.getElementById('v-re-dashboard');
+  if (view) view.classList.add('active');
+  var from = (document.getElementById('re-date-from')||{}).value||'';
+  var to   = (document.getElementById('re-date-to')||{}).value||'';
+  var myL  = myReLeads();
+  var rangeStr = (from||to) ? ((from||'start')+' → '+(to||'today')) : 'all time';
+
+  function inRange(d){ if(!from&&!to) return true; if(from&&d<from) return false; if(to&&d>to) return false; return true; }
+
+  // Total calls in range = has CALL_DATE in range AND call status not empty
+  var totalCalls = myL.filter(function(l){
+    var cd = normD(l.callDate||'');
+    return cd && inRange(cd) && l.callStatus && l.callStatus !== 'NOT CALLED';
+  }).length;
+
+  // 354 Recharged = d354Done=RECHARGED + d354Date in range + saleDone=YES
+  var r354 = myL.filter(function(l){
+    var d = normD(l.d354Date||'');
+    return l.d354Done==='RECHARGED' && d && inRange(d) && l.saleDone==='YES';
+  }).length;
+
+  // 999 Recharged = d999Done=RECHARGED + d999Date in range + saleDone=YES
+  var r999 = myL.filter(function(l){
+    var d = normD(l.d999Date||'');
+    return l.d999Done==='RECHARGED' && d && inRange(d) && l.saleDone==='YES';
+  }).length;
+
+  var revenue = (r354 * 354) + (r999 * 999);
+
+  var statsEl = document.getElementById('re-dash-stats');
+  if (statsEl) statsEl.innerHTML =
+    '<div class="stat blue"><div class="stat-lbl">Total Assigned</div><div class="stat-val">'+myL.length+'</div><div class="stat-sub">your leads</div></div>' +
+    '<div class="stat amber"><div class="stat-lbl">Total Calls</div><div class="stat-val">'+totalCalls+'</div><div class="stat-sub">'+rangeStr+'</div></div>' +
+    '<div class="stat green"><div class="stat-lbl">354 Recharged</div><div class="stat-val">'+r354+'</div><div class="stat-sub">₹354 × '+r354+' = ₹'+(r354*354)+'</div></div>' +
+    '<div class="stat blue"><div class="stat-lbl">999 Recharged</div><div class="stat-val">'+r999+'</div><div class="stat-sub">₹999 × '+r999+' = ₹'+(r999*999)+'</div></div>';
+
+  // Revenue card
+  var revCard = '<div style="background:var(--surf);border:1px solid rgba(6,214,160,.3);border-radius:var(--r);padding:18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">' +
+    '<div><div style="font-size:11px;color:var(--txt2);font-family:var(--mono);margin-bottom:4px">TOTAL REVENUE · '+rangeStr+'</div>' +
+    '<div style="font-size:32px;font-weight:800;font-family:var(--dis);color:var(--acc2)">₹'+revenue.toLocaleString('en-IN')+'</div></div>' +
+    '<div style="text-align:right"><div style="font-size:12px;color:var(--txt2)">354 plan: ₹'+(r354*354).toLocaleString('en-IN')+'</div>' +
+    '<div style="font-size:12px;color:var(--txt2)">999 plan: ₹'+(r999*999).toLocaleString('en-IN')+'</div></div></div>';
+
+  var existing = document.getElementById('re-revenue-card');
+  if (!existing) {
+    var statsEl2 = document.getElementById('re-dash-stats');
+    if (statsEl2) statsEl2.insertAdjacentHTML('afterend', '<div id="re-revenue-card">'+revCard+'</div>');
+  } else {
+    existing.innerHTML = revCard;
+  }
+
+  // Call history table
+  var calledLeads = myL.filter(function(l){
+    var cd = normD(l.callDate||'');
+    return cd && inRange(cd);
+  }).sort(function(a,b){ return (normD(b.callDate)||'').localeCompare(normD(a.callDate)||''); });
+
+  var page   = paginate(calledLeads, reDashPage, PS);
+  var tblEl  = document.getElementById('re-calls-tbl');
+  var pagEl  = document.getElementById('re-calls-pag');
+  if (tblEl) {
+    if (!page.length) {
+      tblEl.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-ico">📵</div>'+(calledLeads.length?'No calls in selected range':'No calls logged yet')+'</div></td></tr>';
+    } else {
+      tblEl.innerHTML = page.map(function(l){
+        return '<tr>' +
+          '<td><strong>'+l.name+'</strong></td>' +
+          '<td class="mono" style="font-size:11px">'+l.number+'</td>' +
+          '<td style="font-size:12px">'+l.location+'</td>' +
+          '<td>'+(l.callStatus==='OPEN'?'<span class="badge b-open">● OPEN</span>':'<span class="badge b-close">✓ CLOSE</span>')+'</td>' +
+          '<td><span class="badge '+(l.saleDone==='YES'?'b-v':'b-u')+'">'+( l.saleDone||'—')+'</span></td>' +
+          '<td class="mono" style="font-size:11px">'+normD(l.callDate||'')+'</td>' +
+          '<td style="font-size:12px">'+( l.remarks||'—')+'</td>' +
+          '</tr>';
+      }).join('');
+    }
+  }
+  if (pagEl) pagEl.innerHTML = pagHtml(calledLeads.length, reDashPage, PS, 'setReDashPage', 'entries');
+}
+function setReDashPage(p){ reDashPage=p; renderReDashboard(); }
+
+// ── Recharge Leads ───────────────────────────────────
+function switchReTab(tab) {
+  reLeadTab = tab; rePage = 1;
+  ['all','blank','called'].forEach(function(t){
+    var el = document.getElementById('re-tab-'+t);
+    if(el) el.classList.toggle('active', t===tab);
+  });
+  renderReTable();
+}
+
+async function renderReLeads() {
+  document.getElementById('v-re-leads').classList.add('active');
+  if (!RE_LEADS.length) await loadReLeads();
+  renderReStats();
+  // Default: show only pending (blank recharge status, not already recharged)
+  if (reLeadTab==='all') switchReTab('blank');
+  else renderReTable();
+  setTimeout(function(){
+    var s=document.getElementById('re-srch'), f=document.getElementById('re-flt-call');
+    if(s) s.oninput=function(){rePage=1;renderReTable();};
+    if(f) f.onchange=function(){rePage=1;renderReTable();};
+  },50);
+}
+
+function renderReStats() {
+  var L   = myReLeads();
+  var tot = L.length;
+  var blank   = L.filter(function(l){ return !l.rechargeStatus || l.rechargeStatus.trim()===''; }).length;
+  var recharg = L.filter(function(l){ return l.rechargeStatus==='ALREADY RECHARGED'; }).length;
+  var called  = L.filter(function(l){ return l.callStatus && l.callStatus!=='NOT CALLED' && l.callStatus!==''; }).length;
+  var el = document.getElementById('re-stats');
+  if (el) el.innerHTML =
+    '<div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc)">'+tot+'</div><div class="ag-stat-lbl">Total Assigned</div></div>' +
+    '<div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc3)">'+blank+'</div><div class="ag-stat-lbl">⬜ Pending</div></div>' +
+    '<div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc2)">'+recharg+'</div><div class="ag-stat-lbl">✓ Recharged</div></div>';
+}
+
+function setRePage(p){ rePage=p; renderReTable(); }
+
+function renderReTable() {
+  var srchEl = document.getElementById('re-srch');
+  var fltEl  = document.getElementById('re-flt-call');
+  var tblEl  = document.getElementById('re-tbl');
+  var pagEl  = document.getElementById('re-pag');
+  if (!tblEl) return;
+  var q   = srchEl ? srchEl.value.toLowerCase() : '';
+  var flt = fltEl  ? fltEl.value : '';
+  var L   = myReLeads().slice().sort(function(a,b){
+    return (b.joinDate||'').localeCompare(a.joinDate||'');
+  });
+
+  // Tab filter
+  if (reLeadTab==='blank')  L = L.filter(function(l){ return !l.rechargeStatus||l.rechargeStatus.trim()===''; });
+  if (reLeadTab==='called') L = L.filter(function(l){ return l.callStatus&&l.callStatus!=='NOT CALLED'&&l.callStatus!==''; });
+
+  if (q)   L = L.filter(function(l){ return l.name.toLowerCase().indexOf(q)>-1||l.number.indexOf(q)>-1; });
+  if (flt) L = L.filter(function(l){ return (l.callStatus||'NOT CALLED')===flt; });
+
+  var page = paginate(L, rePage, PS);
+  if (!page.length) {
+    tblEl.innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-ico">📋</div>No leads found</div></td></tr>';
+    if(pagEl) pagEl.innerHTML=pagHtml(L.length,rePage,PS,'setRePage','leads');
+    return;
+  }
+
+  tblEl.innerHTML = page.map(function(l){
+    var isRecharged = l.rechargeStatus==='ALREADY RECHARGED';
+    var callSt = l.callStatus||'NOT CALLED';
+    var callBadge = callSt==='OPEN'?'<span class="badge b-open">● OPEN</span>':
+                    callSt==='CLOSE'?'<span class="badge b-close">✓ CLOSE</span>':
+                    '<span class="badge b-nc">— Not Called</span>';
+    var rechBadge = isRecharged
+      ? '<span class="badge b-v" style="font-size:10px">✓ Recharged</span>'
+      : '<span class="badge b-nc" style="font-size:10px">⬜ Pending</span>';
+    var actionCell = isRecharged
+      ? '<span style="font-size:11px;color:var(--acc2)">🔒 Recharged</span>'
+      : '<button class="act-btn" onclick="openReLog('+l.rowIndex+')">📝 Entry</button>';
+    var copyBtn = '<button class="act-btn" style="margin-left:4px" onclick="copyText(&#39;'+l.number+'&#39;);event.stopPropagation()" title="Copy">&#128203;</button>';
+    return '<tr class="'+(isRecharged?'is-verified':'')+'">'+
+      '<td><strong>'+l.name+'</strong></td>'+
+      '<td class="mono" style="font-size:11px">'+l.number+copyBtn+'</td>'+
+      '<td style="font-size:12px">'+l.location+'</td>'+
+      '<td>'+rechBadge+'</td>'+
+      '<td>'+callBadge+'</td>'+
+      '<td><span class="badge '+(l.saleDone==='YES'?'b-v':'b-nc')+'">'+(l.saleDone||'—')+'</span></td>'+
+      '<td class="mono" style="font-size:11px">'+(normD(l.callDate||'')||'—')+'</td>'+
+      '<td>'+actionCell+'</td>'+
+      '</tr>';
+  }).join('');
+  if(pagEl) pagEl.innerHTML=pagHtml(L.length,rePage,PS,'setRePage','leads');
+}
+
+function searchReNumber() {
+  var q=document.getElementById('re-srch-num').value.trim();
+  var res=document.getElementById('re-num-result');
+  if(!q){res.style.display='none';return;}
+  var found=myReLeads().filter(function(l){return l.number.indexOf(q)>-1;});
+  res.style.display='block';
+  if(!found.length){res.innerHTML='<div style="padding:10px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;color:var(--txt2)">No lead found</div>';return;}
+  res.innerHTML=found.map(function(l){
+    var isR=l.rechargeStatus==='ALREADY RECHARGED';
+    var action=isR?'<span style="color:var(--acc2);font-size:12px">Recharged</span>':'<button class="act-btn" onclick="openReLog('+l.rowIndex+')">Entry</button>';
+    return '<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
+      '<strong>'+l.name+'</strong><span class="mono" style="font-size:11px">'+l.number+'</span>'+
+      '<span>'+l.location+'</span><span style="margin-left:auto">'+action+'</span></div>';
+  }).join('');
+}
+
+// ── Recharge Entry Modal ─────────────────────────────
+function openReLog(rowIndex) {
+  var l = RE_LEADS.find(function(x){ return x.rowIndex===rowIndex; });
+  if (!l) return;
+  if (l.rechargeStatus==='ALREADY RECHARGED') { toast('🔒 Already recharged — locked','err'); return; }
+  reActivRow = rowIndex;
+  document.getElementById('re-log-info').innerHTML =
+    '<div><div class="di-lbl">Name</div><div class="di-val">'+l.name+'</div></div>'+
+    '<div><div class="di-lbl">Number</div><div class="di-val mono">'+l.number+'</div></div>'+
+    '<div><div class="di-lbl">Location</div><div class="di-val">'+l.location+'</div></div>'+
+    '<div><div class="di-lbl">Recharge Status</div><div class="di-val">'+(l.rechargeStatus||'Pending')+'</div></div>';
+  document.getElementById('re-log-status').value = l.callStatus||'';
+  document.getElementById('re-log-sale').value   = l.saleDone||'';
+  document.getElementById('re-log-by').value     = CU.name;
+  var dateEl   = document.getElementById('re-log-date');
+  var lockNote = document.getElementById('re-log-date-note');
+  var locked   = l.callDate && l.callDate.trim()!=='';
+  if (locked) {
+    dateEl.value=normD(l.callDate); dateEl.readOnly=true;
+    dateEl.style.opacity='0.6'; dateEl.style.cursor='not-allowed';
+    lockNote.style.display='block';
+  } else {
+    dateEl.value=new Date().toISOString().split('T')[0];
+    dateEl.readOnly=false; dateEl.style.opacity='1'; dateEl.style.cursor='pointer';
+    lockNote.style.display='none';
+  }
+  openModal('m-re-log');
+}
+
+async function saveReLog() {
+  var status  = document.getElementById('re-log-status').value;
+  var remark  = document.getElementById('re-log-remark').value.trim();
+  var date    = document.getElementById('re-log-date').value;
+  var sale    = document.getElementById('re-log-sale').value;
+  if (!status) { toast('⚠ Select call status','err'); return; }
+  if (!remark) { toast('⚠ Remarks required','err'); return; }
+  if (!date)   { toast('⚠ Select call date','err'); return; }
+  if (!sale)   { toast('⚠ Select Sale Pitched','err'); return; }
+  var btn = document.getElementById('re-log-save-btn');
+  btn.disabled=true; btn.textContent='Saving…';
+  var payload = {
+    action: 'saveRechargeEntry', key: CFG.secretKey,
+    rowIndex: reActivRow, callStatus: status,
+    remarks: remark, callDate: normD(date),
+    calledBy: CU.name, saleDone: sale
+  };
+  try {
+    var res  = await fetch(CFG.scriptUrl, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
+    var json = await res.json();
+    if (!json.ok) throw new Error(json.error||'Save failed');
+    // Update in-memory
+    var l = RE_LEADS.find(function(x){ return x.rowIndex===reActivRow; });
+    if (l) { l.callStatus=status; l.remarks=remark; l.callDate=normD(date); l.calledBy=CU.name; l.saleDone=sale; }
+    toast('✅ Entry saved to sheet!','ok');
+    closeModal('m-re-log');
+    renderReTable();
+    renderReStats();
+  } catch(err) {
+    toast('⚠ Save failed: '+err.message,'err');
+  }
+  btn.disabled=false; btn.textContent='💾 Save Entry';
+}
+
+// ── Recharge Reports ─────────────────────────────────
+function clearReRepDates(){ document.getElementById('re-rep-from').value=''; document.getElementById('re-rep-to').value=''; renderReReports(); }
+function setReRepQuick(days){ var to=new Date(),from=new Date(); from.setDate(from.getDate()-(days-1)); var fmt=function(d){return d.toISOString().split('T')[0];}; document.getElementById('re-rep-from').value=fmt(from); document.getElementById('re-rep-to').value=fmt(to); renderReReports(); }
+
+async function renderReReports() {
+  document.getElementById('v-re-reports').classList.add('active');
+  if (!RE_LEADS.length) await loadReLeads();
+  var from = document.getElementById('re-rep-from').value||'';
+  var to   = document.getElementById('re-rep-to').value||'';
+  var rl   = document.getElementById('re-rep-range-lbl');
+  if (rl) rl.textContent = (from||to)?((from||'start')+' → '+(to||'today')):'ALL TIME';
+  var L = RE_LEADS;
+  function inR(d){ if(!from&&!to)return true; if(from&&d<from)return false; if(to&&d>to)return false; return true; }
+  var totCalls = L.filter(function(l){ var cd=normD(l.callDate||''); return cd&&inR(cd)&&l.callStatus&&l.callStatus!=='NOT CALLED'; }).length;
+  var tot354   = L.filter(function(l){ var d=normD(l.d354Date||''); return l.d354Done==='RECHARGED'&&d&&inR(d)&&l.saleDone==='YES'; }).length;
+  var tot999   = L.filter(function(l){ var d=normD(l.d999Date||''); return l.d999Done==='RECHARGED'&&d&&inR(d)&&l.saleDone==='YES'; }).length;
+  var totRev   = tot354*354 + tot999*999;
+  document.getElementById('re-rep-stats').innerHTML =
+    '<div class="stat blue"><div class="stat-lbl">Total Leads</div><div class="stat-val">'+L.length+'</div><div class="stat-sub">all agents</div></div>'+
+    '<div class="stat amber"><div class="stat-lbl">Total Calls</div><div class="stat-val">'+totCalls+'</div><div class="stat-sub">'+(from||to?((from||'start')+' → '+(to||'today')):'all time')+'</div></div>'+
+    '<div class="stat green"><div class="stat-lbl">354 Recharged</div><div class="stat-val">'+tot354+'</div><div class="stat-sub">₹'+(tot354*354).toLocaleString('en-IN')+'</div></div>'+
+    '<div class="stat green"><div class="stat-lbl">999 Recharged</div><div class="stat-val">'+tot999+'</div><div class="stat-sub">₹'+(tot999*999).toLocaleString('en-IN')+'</div></div>';
+
+  var agents = getUsers().filter(function(u){ return u.role==='agent'&&(u.dept==='recharge'||u.dept==='both'); });
+  var agData = agents.map(function(a){
+    var sn  = (a.sheetName||'').trim().toUpperCase();
+    var ass = L.filter(function(l){ return (l.assignedTo||'').trim().toUpperCase()===sn; });
+    var calls = ass.filter(function(l){ var cd=normD(l.callDate||''); return cd&&inR(cd)&&l.callStatus&&l.callStatus!=='NOT CALLED'; }).length;
+    var r354  = ass.filter(function(l){ var d=normD(l.d354Date||''); return l.d354Done==='RECHARGED'&&d&&inR(d)&&l.saleDone==='YES'; }).length;
+    var r999  = ass.filter(function(l){ var d=normD(l.d999Date||''); return l.d999Done==='RECHARGED'&&d&&inR(d)&&l.saleDone==='YES'; }).length;
+    var rev   = r354*354 + r999*999;
+    var rem   = ass.filter(function(l){ return !l.callStatus||l.callStatus==='NOT CALLED'||l.callStatus===''; }).length;
+    return {a,ass,calls,r354,r999,rev,rem,total:ass.length};
+  });
+
+  document.getElementById('re-rep-tbl').innerHTML = agData.map(function(d){
+    return '<tr>'+
+      '<td><strong>'+d.a.name+'</strong><br><span class="mono" style="font-size:10px;color:var(--txt2)">'+d.a.sheetName+'</span></td>'+
+      '<td class="mono" style="color:var(--acc)">'+d.total+'</td>'+
+      '<td class="mono" style="color:var(--acc)">'+d.calls+'</td>'+
+      '<td class="mono" style="color:var(--acc2)">'+d.r354+'</td>'+
+      '<td class="mono" style="color:var(--acc2)">'+d.r999+'</td>'+
+      '<td style="font-weight:700;color:var(--acc2)">₹'+d.rev.toLocaleString('en-IN')+'</td>'+
+      '<td class="mono" style="color:var(--txt2)">'+d.rem+'</td>'+
+      '</tr>';
+  }).join('');
+
+  // Chart
+  if (reChart) { reChart.destroy(); reChart=null; }
+  var ctx = document.getElementById('re-chart');
+  if (ctx && agData.length) {
+    reChart = new Chart(ctx, {
+      type:'bar',
+      data:{ labels:agData.map(function(d){return d.a.name.split(' ')[0];}),
+        datasets:[
+          {label:'Total Leads', data:agData.map(function(d){return d.total;}), backgroundColor:'rgba(59,130,246,0.7)',borderRadius:4},
+          {label:'Calls Done',  data:agData.map(function(d){return d.calls;}), backgroundColor:'rgba(245,158,11,0.7)',borderRadius:4},
+          {label:'354 Done',    data:agData.map(function(d){return d.r354;}),  backgroundColor:'rgba(6,214,160,0.7)', borderRadius:4},
+          {label:'999 Done',    data:agData.map(function(d){return d.r999;}),  backgroundColor:'rgba(139,92,246,0.7)',borderRadius:4},
+        ]},
+      options:{responsive:true,plugins:{legend:{labels:{color:'#8892a4',font:{size:12}}},tooltip:{mode:'index'}},
+        scales:{x:{ticks:{color:'#8892a4'},grid:{color:'rgba(42,48,64,0.6)'}},y:{ticks:{color:'#8892a4'},grid:{color:'rgba(42,48,64,0.6)'},beginAtZero:true}}}
+    });
+  }
+}
+
+function exportReReport() {
+  var from=document.getElementById('re-rep-from').value||'';
+  var to  =document.getElementById('re-rep-to').value||'';
+  var agents=getUsers().filter(function(u){return u.role==='agent'&&(u.dept==='recharge'||u.dept==='both');});
+  var header='Agent,Total,Calls Done,354 Recharged,999 Recharged,Revenue,Remaining\n';
+  var rows=agents.map(function(a){
+    var sn=(a.sheetName||'').trim().toUpperCase();
+    var ass=RE_LEADS.filter(function(l){return (l.assignedTo||'').trim().toUpperCase()===sn;});
+    function inR(d){if(!from&&!to)return true;if(from&&d<from)return false;if(to&&d>to)return false;return true;}
+    var calls=ass.filter(function(l){var cd=normD(l.callDate||'');return cd&&inR(cd)&&l.callStatus&&l.callStatus!=='NOT CALLED';}).length;
+    var r354=ass.filter(function(l){var d=normD(l.d354Date||'');return l.d354Done==='RECHARGED'&&d&&inR(d)&&l.saleDone==='YES';}).length;
+    var r999=ass.filter(function(l){var d=normD(l.d999Date||'');return l.d999Done==='RECHARGED'&&d&&inR(d)&&l.saleDone==='YES';}).length;
+    var rem=ass.filter(function(l){return !l.callStatus||l.callStatus==='NOT CALLED'||l.callStatus==='';}).length;
+    return '"'+a.name+'",'+ass.length+','+calls+','+r354+','+r999+','+(r354*354+r999*999)+','+rem;
+  }).join('\n');
+  var blob=new Blob([header+rows],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='recharge_report_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+  toast('✅ Recharge report exported','ok');
+}
+
+// ── hardRefresh also reloads recharge if in that view ────
+const _origHardRefresh = hardRefresh;
+async function hardRefresh() {
+  await _origHardRefresh();
+  var v = window._curView||'';
+  if (v==='re-dashboard'||v==='re-leads'||v==='re-reports') await loadReLeads();
 }
 
 // ═══════════════════════════════════════════════════
