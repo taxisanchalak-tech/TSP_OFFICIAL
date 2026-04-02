@@ -986,9 +986,9 @@ const BAKED = {
 };
 
 let CFG = {
-  sheetId:    '',
+  sheetId:    '1joFxF1g26KhKgVFDmPM-2krU0ptKy77ycqNQrQ68dzM',
   apiKey:     '',
-  scriptUrl:  '',
+  scriptUrl:  'https://script.google.com/macros/s/AKfycbyBQM3bOCtNTflJmX88QhaOiPUCx6MgT4k4DEQTG8gMbRffb1DpOapcFmTNAvdhN4q9Zw/exec',
   secretKey:  'vericrm2026',
   sheetTab:   'new_user',
   logsTab:    'CALL_LOGS',
@@ -1526,7 +1526,7 @@ async function initApp() {
   document.getElementById('sb-role').textContent   = CU.role.toUpperCase();
   document.getElementById('fp-val').textContent    = CFG.filterDate;
   // Set dept label
-  const deptLabels = { id_verification:'ID VERIFICATION', recharge:'RECHARGE DEPT', both:'ALL DEPARTMENTS' };
+  const deptLabels = { id_verification:'ID VERIFICATION', recharge:'RECHARGE DEPT', both:'ID VERI + RECHARGE' };
   const deptEl = document.getElementById('sb-dept');
   if (deptEl) deptEl.textContent = deptLabels[CU.dept] || deptLabels[CU.activeDept] || 'ID VERIFICATION';
 
@@ -1535,7 +1535,12 @@ async function initApp() {
   // Landing page by role + dept
   if (CU.role === 'agent') {
     const d = CU.dept || 'id_verification';
-    navigateTo(d === 'recharge' ? 're-dashboard' : 'agent-dashboard');
+    if (d === 'recharge') {
+      navigateTo('re-dashboard');
+    } else {
+      // id_verification or both — go to My Dashboard
+      navigateTo('agent-dashboard');
+    }
   } else {
     navigateTo('all-leads');
   }
@@ -1554,18 +1559,16 @@ function buildSidebar() {
   const role = CU.role;
   const isAgent = CU.role === 'agent';
   const dept    = CU.dept || 'id_verification';
-  const isRecharge = dept === 'recharge' || dept === 'both';
-  const isIDVeri   = dept === 'id_verification' || dept === 'both';
   const items = [
-    { key:'dashboard',        icon:'📊', label:'Dashboard',       roles:['admin','manager'] },
-    { key:'agent-dashboard',  icon:'📊', label:'My Dashboard',    roles:['agent'], depts:['id_verification','both'] },
-    { key:'my-leads',         icon:'📞', label:'My Leads',        roles:['agent'], badge: myLeads().length, depts:['id_verification','both'] },
-    { key:'re-dashboard',     icon:'💳', label:'My Dashboard',    roles:['agent'], depts:['recharge'] },
-    { key:'re-leads',         icon:'📋', label:'My Leads',        roles:['agent'], depts:['recharge'] },
-    { key:'all-leads',        icon:'🗂️', label:'All Leads',       roles:['admin','manager'] },
-    { key:'users',            icon:'👥', label:'Manage Users',    roles:['admin'] },
-    { key:'reports',          icon:'📈', label:'ID Veri Reports', roles:['admin','manager'] },
-    { key:'re-reports',       icon:'📈', label:'Recharge Reports',roles:['admin','manager'] },
+    { key:'dashboard',        icon:'📊', label:'Dashboard',            roles:['admin','manager'] },
+    { key:'agent-dashboard',  icon:'📊', label:'ID Veri Dashboard',    roles:['agent'], depts:['id_verification','both'] },
+    { key:'my-leads',         icon:'📞', label:'ID Veri Leads',        roles:['agent'], badge: myLeads().length, depts:['id_verification','both'] },
+    { key:'re-dashboard',     icon:'💳', label:'Recharge Dashboard',   roles:['agent'], depts:['recharge','both'] },
+    { key:'re-leads',         icon:'📋', label:'Recharge Leads',       roles:['agent'], depts:['recharge','both'] },
+    { key:'all-leads',        icon:'🗂️', label:'All Leads',            roles:['admin','manager'] },
+    { key:'users',            icon:'👥', label:'Manage Users',         roles:['admin'] },
+    { key:'reports',          icon:'📈', label:'ID Veri Reports',      roles:['admin','manager'] },
+    { key:'re-reports',       icon:'📈', label:'Recharge Reports',     roles:['admin','manager'] },
   ];
   let html = '<div class="nav-sec">Main Menu</div>';
   items.forEach(it => {
@@ -1612,8 +1615,14 @@ function navigateTo(view) {
     case 'dashboard':       renderDashboard();        break;
     case 'agent-dashboard': renderAgentDashboard();   break;
     case 'my-leads':        renderMyLeads();          break;
-    case 're-dashboard':    renderReDashboard();      break;
-    case 're-leads':        renderReLeads();          break;
+    case 're-dashboard':
+      if (!RE_LEADS.length) loadReLeads().then(renderReDashboard);
+      else renderReDashboard();
+      break;
+    case 're-leads':
+      if (!RE_LEADS.length) loadReLeads().then(renderReLeads);
+      else renderReLeads();
+      break;
     case 'all-leads':       renderAllLeads();         break;
     case 'users':           renderUsers();            break;
     case 'reports':         renderReports();          break;
