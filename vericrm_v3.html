@@ -1401,11 +1401,11 @@ function autoDistribute() {
     agents.map(a => (a.sheetName||'').trim().toUpperCase()).filter(Boolean)
   );
 
-  // Unassigned = blank, 'ID VERIFICATION', or any value not matching a real agent
-  const POOL_VALUES = new Set(['', 'ID VERIFICATION', 'ID_VERIFICATION']);
+  // Unassigned = only blank values — NOT 'ID VERIFICATION'
+  // 'ID VERIFICATION' is a valid agent sheetName
   const unassigned = LEADS.filter(l => {
     const a = l.assignedTo.trim().toUpperCase();
-    return POOL_VALUES.has(a) || (!knownNames.has(a) && !a);
+    return a === '';  // only truly unassigned rows
   });
 
   if (!unassigned.length) return;
@@ -1550,6 +1550,8 @@ async function initApp() {
 
 async function hardRefresh() {
   await loadLeads();
+  // Rebuild sidebar with fresh badge counts
+  buildSidebar();
   navigateTo(window._curView || 'dashboard');
   document.getElementById('fp-val').textContent = CFG.filterDate;
 }
@@ -3138,13 +3140,14 @@ async function renderReLeads() {
 function renderReStats() {
   var L   = myReLeads();
   var tot = L.length;
-  var blank   = L.filter(function(l){ return !l.rechargeStatus || l.rechargeStatus.trim()===''; }).length;
-  var recharg = L.filter(function(l){ return l.rechargeStatus==='ALREADY RECHARGED'; }).length;
-  var called  = L.filter(function(l){ return l.callStatus && l.callStatus!=='NOT CALLED' && l.callStatus!==''; }).length;
+  // Pending = blank rechargeStatus (call not done yet)
+  var pending  = L.filter(function(l){ return !l.rechargeStatus || l.rechargeStatus.trim()===''; }).length;
+  var recharg  = L.filter(function(l){ return (l.rechargeStatus||'').toUpperCase().includes('RECHARGED'); }).length;
+  var callDone = L.filter(function(l){ return l.callStatus && l.callStatus!=='' && l.callStatus!=='NOT CALLED'; }).length;
   var el = document.getElementById('re-stats');
   if (el) el.innerHTML =
     '<div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc)">'+tot+'</div><div class="ag-stat-lbl">Total Assigned</div></div>' +
-    '<div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc3)">'+blank+'</div><div class="ag-stat-lbl">⬜ Pending</div></div>' +
+    '<div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc3)">'+pending+'</div><div class="ag-stat-lbl">⬜ Pending</div></div>' +
     '<div class="ag-stat"><div class="ag-stat-val" style="color:var(--acc2)">'+recharg+'</div><div class="ag-stat-lbl">✓ Recharged</div></div>';
 }
 
@@ -3163,8 +3166,10 @@ function renderReTable() {
   });
 
   // Tab filter
+  // Pending = RECHARGE_STATUS is blank (not yet recharged)
   if (reLeadTab==='blank')  L = L.filter(function(l){ return !l.rechargeStatus||l.rechargeStatus.trim()===''; });
-  if (reLeadTab==='called') L = L.filter(function(l){ return l.callStatus&&l.callStatus!=='NOT CALLED'&&l.callStatus!==''; });
+  // Called = has a call status entry (any call made)
+  if (reLeadTab==='called') L = L.filter(function(l){ return l.callStatus&&l.callStatus!==''&&l.callStatus!=='NOT CALLED'; });
 
   if (q)   L = L.filter(function(l){ return l.name.toLowerCase().indexOf(q)>-1||l.number.indexOf(q)>-1; });
   if (flt) L = L.filter(function(l){ return (l.callStatus||'NOT CALLED')===flt; });
