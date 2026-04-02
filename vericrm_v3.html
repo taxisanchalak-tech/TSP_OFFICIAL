@@ -1390,31 +1390,10 @@ function filterByDate(leads, fromDateStr) {
 //  a known agent's sheetName
 // ═══════════════════════════════════════════════════
 function autoDistribute() {
-  const users   = getUsers();
-  const agents  = users.filter(u =>
-    u.role === 'agent' &&
-    (u.dept === 'id_verification' || u.dept === 'both')
-  );
-  if (!agents.length) return;
-
-  const knownNames = new Set(
-    agents.map(a => (a.sheetName||'').trim().toUpperCase()).filter(Boolean)
-  );
-
-  // Unassigned = only blank values — NOT 'ID VERIFICATION'
-  // 'ID VERIFICATION' is a valid agent sheetName
-  const unassigned = LEADS.filter(l => {
-    const a = l.assignedTo.trim().toUpperCase();
-    return a === '';  // only truly unassigned rows
-  });
-
-  if (!unassigned.length) return;
-
-  // Round-robin distribution
-  unassigned.forEach((lead, i) => {
-    const agent = agents[i % agents.length];
-    lead.assignedTo = agent.sheetName;
-  });
+  // DISABLED — sheet Assign_To column is the source of truth
+  // Agents see ONLY leads where Assign_To matches their sheetName exactly
+  // No auto-distribution in CRM — admin assigns via sheet directly
+  return;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1642,18 +1621,12 @@ function navigateTo(view) {
 //  HELPERS
 // ═══════════════════════════════════════════════════
 function myLeads() {
-  // Priority 1: sheetName field (most accurate)
-  // Priority 2: first word of name (e.g. "Dipesh Manager" → "DIPESH")
-  // Priority 3: username, full name
-  const sn = (CU.sheetName || '').trim().toUpperCase();
-  const names = new Set([
-    sn,
-    CU.name.trim().toUpperCase(),
-    CU.name.trim().split(' ')[0].toUpperCase(),
-    CU.username.trim().toUpperCase(),
-  ].filter(Boolean));
-
-  return LEADS.filter(l => names.has(l.assignedTo.trim().toUpperCase()));
+  // STRICT: only match sheetName — sheet Assign_To is source of truth
+  const sn = (CU.sheetName || CU.name || '').trim().toUpperCase();
+  if (!sn) return [];
+  return LEADS.filter(function(l){
+    return l.assignedTo.trim().toUpperCase() === sn;
+  });
 }
 
 function bDoc(s)  { return s==='Verified' ? '<span class="badge b-v">✓ Verified</span>' : '<span class="badge b-u">⚠ Unverified</span>'; }
@@ -3004,12 +2977,11 @@ async function loadReLeads() {
 }
 
 function myReLeads() {
-  const sn    = (CU.sheetName||'').trim().toUpperCase();
-  const names = new Set([sn, CU.name.trim().toUpperCase(),
-    CU.name.trim().split(' ')[0].toUpperCase(),
-    CU.username.trim().toUpperCase()].filter(Boolean));
+  // STRICT: only match sheetName
+  const sn = (CU.sheetName || CU.name || '').trim().toUpperCase();
+  if (!sn) return [];
   return RE_LEADS.filter(function(l){
-    return names.has((l.assignedTo||'').trim().toUpperCase());
+    return (l.assignedTo||'').trim().toUpperCase() === sn;
   });
 }
 
@@ -3034,17 +3006,25 @@ function clearReDates() {
 function renderReDashboard() {
   var view = document.getElementById('v-re-dashboard');
   if (view) view.classList.add('active');
-  var from = (document.getElementById('re-date-from')||{}).value||'';
-  var to   = (document.getElementById('re-date-to')||{}).value||'';
+  // Default to today if no date set
+  var fromEl = document.getElementById('re-date-from');
+  var toEl   = document.getElementById('re-date-to');
+  if (fromEl && !fromEl.value) { var t=new Date().toISOString().split('T')[0]; fromEl.value=t; }
+  if (toEl   && !toEl.value)   { var t=new Date().toISOString().split('T')[0]; toEl.value=t;   }
+  var from = (fromEl||{}).value||'';
+  var to   = (toEl||{}).value||'';
   var myL  = myReLeads();
   var rangeStr = (from||to) ? ((from||'start')+' → '+(to||'today')) : 'all time';
 
   function inRange(d){ if(!from&&!to) return true; if(from&&d<from) return false; if(to&&d>to) return false; return true; }
 
   // Total calls in range = has CALL_DATE in range AND call status not empty
+  // Total Calls = leads with callDate in range (call date is source of truth)
   var totalCalls = myL.filter(function(l){
     var cd = normD(l.callDate||'');
-    return cd && inRange(cd) && l.callStatus && l.callStatus !== 'NOT CALLED';
+    if (!cd || cd === '') return false;
+    if (!from && !to) return true;  // no range = all
+    return inRange(cd);
   }).length;
 
   // 354 Recharged = d354Done=RECHARGED + d354Date in range + saleDone=YES
