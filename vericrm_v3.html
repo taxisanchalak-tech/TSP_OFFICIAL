@@ -977,7 +977,7 @@ tr.is-verified{cursor:default}
 const BAKED = {
   sheetId:    '1joFxF1g26KhKgVFDmPM-2krU0ptKy77ycqNQrQ68dzM',
   apiKey:     'AIzaSyAzeuvMMuvmovuVpRPeh81HmoA50y4fGE4',
-  scriptUrl:  'https://script.google.com/macros/s/AKfycbyBQM3bOCtNTflJmX88QhaOiPUCx6MgT4k4DEQTG8gMbRffb1DpOapcFmTNAvdhN4q9Zw/exec',           // ← paste Apps Script URL after final deploy
+  scriptUrl:  'https://script.google.com/macros/s/AKfycbyBQM3bOCtNTflJmX88QhaOiPUCx6MgT4k4DEQTG8gMbRffb1DpOapcFmTNAvdhN4q9Zw/exec',
   secretKey:  'vericrm2026',
   sheetTab:   'new_user',
   logsTab:    'CALL_LOGS',
@@ -986,9 +986,9 @@ const BAKED = {
 };
 
 let CFG = {
-  sheetId:    '1joFxF1g26KhKgVFDmPM-2krU0ptKy77ycqNQrQ68dzM',
+  sheetId:    '',
   apiKey:     '',
-  scriptUrl:  'https://script.google.com/macros/s/AKfycbyBQM3bOCtNTflJmX88QhaOiPUCx6MgT4k4DEQTG8gMbRffb1DpOapcFmTNAvdhN4q9Zw/exec',
+  scriptUrl:  '',
   secretKey:  'vericrm2026',
   sheetTab:   'new_user',
   logsTab:    'CALL_LOGS',
@@ -1067,7 +1067,10 @@ async function loadUsersFromSheet() {
     const res  = await fetch(url);
     const json = await res.json();
     if (json.ok && json.users && json.users.length) {
-      _usersCache = json.users;
+      // Normalize dept to lowercase
+      _usersCache = json.users.map(function(u){
+        return Object.assign({}, u, { dept: (u.dept||'id_verification').trim().toLowerCase(), role: (u.role||'agent').trim().toLowerCase() });
+      });
       // Update localStorage so offline fallback is also fresh
       localStorage.setItem('vericrm_users', JSON.stringify(json.users));
       console.log('✓ Users loaded from sheet:', json.users.length);
@@ -1479,7 +1482,7 @@ async function doLogin() {
     return;
   }
 
-  CU = { ...user, activeDept: dept };
+  CU = { ...user, activeDept: dept, dept: (user.dept||'id_verification').trim().toLowerCase() };
   document.getElementById('login-err').style.display = 'none';
   btn.disabled    = false;
   btn.textContent = 'Sign In →';
@@ -1534,11 +1537,10 @@ async function initApp() {
   buildSidebar();
   // Landing page by role + dept
   if (CU.role === 'agent') {
-    const d = CU.dept || 'id_verification';
+    const d = (CU.dept || 'id_verification').trim().toLowerCase();
     if (d === 'recharge') {
       navigateTo('re-dashboard');
     } else {
-      // id_verification or both — go to My Dashboard
       navigateTo('agent-dashboard');
     }
   } else {
@@ -1574,7 +1576,11 @@ function buildSidebar() {
   items.forEach(it => {
     if (!it.roles.includes(role)) return;
     // Check dept restriction if specified
-    if (it.depts && !it.depts.includes(dept)) return;
+    var userDept = (dept||'id_verification').trim().toLowerCase();
+    if (it.depts) {
+      var deptMatch = it.depts.some(function(d){ return d.toLowerCase() === userDept; });
+      if (!deptMatch) return;
+    }
     const b = it.badge ? `<span class="nav-badge">${it.badge}</span>` : '';
     html += `<div class="nav-it" id="ni-${it.key}" onclick="navigateTo('${it.key}')">`
           + `<span style="font-size:15px">${it.icon}</span>${it.label}${b}</div>`;
