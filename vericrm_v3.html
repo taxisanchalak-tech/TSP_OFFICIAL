@@ -975,9 +975,9 @@ tr.is-verified{cursor:default}
 //  then all users share the file without setup
 // ════════════════════════════════════════════
 const BAKED = {
-  sheetId:    '1joFxF1g26KhKgVFDmPM-2krU0ptKy77ycqNQrQ68dzM',           // ← paste your Sheet ID here
-  apiKey:     'AIzaSyAzeuvMMuvmovuVpRPeh81HmoA50y4fGE4',           // ← paste your API Key here
-  scriptUrl:  'https://script.google.com/macros/s/AKfycbyBQM3bOCtNTflJmX88QhaOiPUCx6MgT4k4DEQTG8gMbRffb1DpOapcFmTNAvdhN4q9Zw/exec',           // ← paste your Apps Script URL here
+  sheetId:    '1joFxF1g26KhKgVFDmPM-2krU0ptKy77ycqNQrQ68dzM',
+  apiKey:     'AIzaSyAzeuvMMuvmovuVpRPeh81HmoA50y4fGE4',
+  scriptUrl:  'https://script.google.com/macros/s/AKfycbyBQM3bOCtNTflJmX88QhaOiPUCx6MgT4k4DEQTG8gMbRffb1DpOapcFmTNAvdhN4q9Zw/exec',           // ← paste Apps Script URL after final deploy
   secretKey:  'vericrm2026',
   sheetTab:   'new_user',
   logsTab:    'CALL_LOGS',
@@ -1022,11 +1022,21 @@ function saveCfg() {
 //  LOCAL USERS  (stored in localStorage)
 // ═══════════════════════════════════════════════════
 const DEFAULT_USERS = [
-  { id:'u1', name:'Super Admin',    username:'admin',   password:'1234', role:'admin',   dept:'both',            sheetName:'' },
-  { id:'u2', name:'Dipesh Manager', username:'dipesh',  password:'1234', role:'manager', dept:'id_verification', sheetName:'DIPESH' },
-  { id:'u3', name:'Kanchan Agent',  username:'kanchan', password:'1234', role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
-  { id:'u4', name:'ID Agent 1',     username:'agent1',  password:'1234', role:'agent',   dept:'id_verification', sheetName:'ID VERIFICATION' },
-  { id:'u5', name:'Recharge Agent', username:'ragent1', password:'1234', role:'agent',   dept:'recharge',        sheetName:'RECHARGE' },
+  { id:'u1',  name:'Admin',       username:'Admin',       password:'admin1234',  role:'admin',   dept:'both',            sheetName:'' },
+  { id:'u2',  name:'Back end',    username:'Backend',     password:'admin1234',  role:'admin',   dept:'both',            sheetName:'' },
+  { id:'u3',  name:'Sarabjit sa', username:'SARABJIT',    password:'Sarab@1234', role:'manager', dept:'both',            sheetName:'' },
+  { id:'u4',  name:'DIPESH',      username:'DIPESH',      password:'219768',     role:'agent',   dept:'id_verification', sheetName:'DIPESH' },
+  { id:'u5',  name:'KANCHAN',     username:'KANCHAN',     password:'205274',     role:'agent',   dept:'id_verification', sheetName:'KANCHAN' },
+  { id:'u6',  name:'SHUBHAM',     username:'SHUBHAM',     password:'212245',     role:'agent',   dept:'id_verification', sheetName:'SHUBHAM' },
+  { id:'u7',  name:'AKRAM',       username:'AKRAM',       password:'546872',     role:'agent',   dept:'recharge',        sheetName:'AKRAM' },
+  { id:'u8',  name:'NISHA',       username:'NISHA',       password:'252674',     role:'agent',   dept:'both',            sheetName:'NISHA' },
+  { id:'u9',  name:'PRIYANKA',    username:'PRIYANKA',    password:'547824',     role:'agent',   dept:'both',            sheetName:'PRIYANKA' },
+  { id:'u10', name:'DIKSHA',      username:'DIKSHA',      password:'874531',     role:'agent',   dept:'id_verification', sheetName:'DIKSHA' },
+  { id:'u11', name:'NITIN',       username:'NITIN',       password:'451234',     role:'agent',   dept:'id_verification', sheetName:'NITIN' },
+  { id:'u12', name:'HARSHITA',    username:'HARSHITA',    password:'451275',     role:'agent',   dept:'both',            sheetName:'HARSHITA' },
+  { id:'u13', name:'ADITI',       username:'ADITI',       password:'954157',     role:'agent',   dept:'both',            sheetName:'ADITI' },
+  { id:'u14', name:'NIKITA',      username:'NIKITA',      password:'746784',     role:'agent',   dept:'recharge',        sheetName:'NIKITA' },
+  { id:'u15', name:'ID VERIFIC.', username:'IDVERIF',     password:'112244',     role:'agent',   dept:'both',            sheetName:'ID VERIFICATION' },
 ];
 
 // In-memory user cache — loaded from sheet on login
